@@ -1,0 +1,35 @@
+# Transient + generated artifacts — keep out of Claude's context.
+.claude/worktrees/
+.claude/settings.local.json
+
+# Generated dashboard (regenerated on demand by scripts/render-dashboard.sh)
+docs/dashboard/
+
+# Build / dependency artifacts
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Dafny build artifacts
+verification/*-cs/
+verification/*-java/
+verification/*-js/
+verification/*-go/
+verification/*-py/
+
+# Secrets
+.env
+.env.local
+.env.*
+secrets/
+
+# Noise
+*.bak
+*.tmp
+.DS_Store

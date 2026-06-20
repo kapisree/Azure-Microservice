@@ -1,0 +1,114 @@
+name: Verifier
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+concurrency:
+  group: verifier-${{ github.head_ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  progress-check:
+    name: Check PROGRESS.md not in PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail if PROGRESS.md is in the diff
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -q '^PROGRESS\.md$'; then
+            echo "::error::PROGRESS.md must be removed before merging. Run: git rm PROGRESS.md && git commit -m 'remove session handoff'"
+            exit 1
+          fi
+
+  # The verifier review itself runs LOCALLY on a developer's Claude Code
+  # subscription via scripts/run-verifier.sh (claude -p), not in CI — the
+  # team has no API-key billing. This job only attests that the findings
+  # were posted to the PR, so the local step is checkable, not honor-system.
+  verifier-attestation:
+    name: Verifier findings posted
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Check for a specflow-verifier findings comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if gh api "repos/$REPO/issues/$PR/comments" --paginate --jq '.[].body' \
+            | grep -q 'specflow-verifier:'; then
+            echo "Verifier findings comment found on PR #$PR."
+          else
+            echo "::error::No verifier findings posted to PR #$PR. From a terminal OUTSIDE any Claude Code session, run: scripts/run-verifier.sh $PR"
+            exit 1
+          fi
+
+  verify-dafny:
+    name: Dafny formal verification
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'has-verification') ||
+      startsWith(github.head_ref, 'phase/validate') ||
+      startsWith(github.head_ref, 'impl/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Dafny (release zip bundles the Z3 solver)
+        run: |
+          curl -sSL -o "$RUNNER_TEMP/dafny.zip" \
+            https://github.com/dafny-lang/dafny/releases/download/v4.9.1/dafny-4.9.1-x64-ubuntu-20.04.zip
+          echo "697ee703b39414b3904dc8c132e51481982f52205c1658f3374d313a284d43eb  $RUNNER_TEMP/dafny.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/dafny.zip" -d "$RUNNER_TEMP/dafny-dist"
+          echo "$RUNNER_TEMP/dafny-dist/dafny" >> "$GITHUB_PATH"
+      - name: Verify all .dfy files (recursive)
+        run: |
+          # Proofs live in verification/<subdir>/ — discovery must be recursive,
+          # matching scripts/run-quality-gates.sh.
+          if find verification -type f -name '*.dfy' | grep -q .; then
+            dafny verify $(find verification -type f -name '*.dfy')
+          else
+            echo "No .dfy files to verify — skipping"
+          fi
+
+  contract-alignment:
+    name: Contract-proof alignment check
+    runs-on: ubuntu-latest
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'has-verification') ||
+      startsWith(github.head_ref, 'phase/validate') ||
+      startsWith(github.head_ref, 'impl/')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Proves/Extracted-from header alignment
+        run: |
+          ERRORS=0
+          while IFS= read -r dfy; do
+            proves=$(head -5 "$dfy" | grep -oE 'Proves:.*' || true)
+            if [ -z "$proves" ]; then
+              echo "::warning file=$dfy::Missing Proves: REQ-NNN header"
+            fi
+          done < <(find verification -type f -name '*.dfy')
+          while IFS= read -r contract; do
+            case "$(basename "$contract")" in
+              __init__.py|README.md) continue ;;
+            esac
+            extracted=$(head -3 "$contract" | grep -oE 'Extracted from: [^ ]+' | sed 's/Extracted from: //' || true)
+            if [ -n "$extracted" ] && [ ! -f "$extracted" ]; then
+              echo "::error file=$contract::References $extracted which does not exist"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done < <(find src/contracts -type f \( -name '*.py' -o -name '*.ts' \) 2>/dev/null)
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::$ERRORS contract-proof alignment errors found"
+            exit 1
+          fi
+          echo "Contract-proof alignment check passed"

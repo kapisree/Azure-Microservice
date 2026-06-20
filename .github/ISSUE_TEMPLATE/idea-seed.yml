@@ -1,0 +1,55 @@
+name: "💡 Idea Seed"
+description: "Seed a new idea to start the SpecFlow pipeline"
+labels: ["specflow:seed", "needs-spec"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## SpecFlow Idea Seed
+        Fill in this form to kick off the automated spec-to-code pipeline.
+        The agents will pick up this issue and begin the SPEC phase.
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: "What is the idea?"
+      description: "One paragraph. What should exist that doesn't exist today?"
+      placeholder: "A tool that..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: "Objective — what should be true when this is done?"
+      description: "Observable outcomes, not implementation steps."
+      placeholder: "When complete, a user should be able to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: users
+    attributes:
+      label: "Who benefits?"
+      description: "Primary users, secondary beneficiaries."
+      placeholder: "Primary: ...\nSecondary: ..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: "Scope"
+      options:
+        - "Small (1-2 days)"
+        - "Medium (1-2 weeks)"
+        - "Large (1+ month)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints
+    attributes:
+      label: "Known constraints or non-goals"
+      placeholder: "Must use Python. No external APIs. Not for mobile."

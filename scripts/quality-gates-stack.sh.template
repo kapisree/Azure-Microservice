@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Optional per-stack quality gate. If present at scripts/quality-gates-<stack>.sh
+# (where <stack> matches the contents of .stack), run-quality-gates.sh will invoke it.
+# Exit 0 on pass, non-zero on fail.
+set -euo pipefail
+
+# Example stack hooks:
+# Python:    python -m mypy src && python -m ruff check src
+# Node:      pnpm test && pnpm typecheck
+# Rust:      cargo test && cargo clippy --all-targets -- -D warnings
+
+echo "No per-stack quality gates configured."
+exit 0

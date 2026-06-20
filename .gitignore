@@ -1,0 +1,41 @@
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Secrets
+.env
+.env.local
+.env.*
+!.env.example
+secrets/
+
+# Generated dashboard (regenerated on demand)
+docs/dashboard/
+
+*.bak
+*.tmp
+*.lock
+
+# Dafny build artifacts
+verification/*-cs/
+verification/*-java/
+verification/*-js/
+verification/*-go/
+verification/*-py/
+
+# OS
+.DS_Store
+Thumbs.db

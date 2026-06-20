@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(./secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "pathPattern": "docs/specs/**/*.md",
+        "command": "bash scripts/verify-doc.sh \"$CLAUDE_FILE_PATH\""
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "pathPattern": "docs/plans/**/*.md",
+        "command": "bash scripts/verify-doc.sh \"$CLAUDE_FILE_PATH\""
+      }
+    ]
+  }
+}

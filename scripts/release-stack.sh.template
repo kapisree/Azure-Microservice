@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Per-stack RELEASE hook contract template.
+# Copy to scripts/release-<your-stack>.sh, customize, mark executable.
+# Implements REQ-110 (article art-release-readiness).
+#
+# Contract:
+#   Inputs (env):
+#     VERSION   - semver string (e.g., 1.4.0)
+#     DIST_DIR  - absolute path to write artifacts under
+#   Outputs:
+#     - One or more artifact files under $DIST_DIR/
+#     - $DIST_DIR/manifest.json listing each artifact with sha256 checksum.
+#   Exit code:
+#     0 on success; non-zero blocks the RELEASE phase.
+#   Constraints:
+#     - No outbound network calls (enforced by code review).
+#     - Pure local packaging. Publishing (PyPI / npm / etc.) is a separate manual step.
+set -euo pipefail
+
+: "${VERSION:?VERSION env var required}"
+: "${DIST_DIR:?DIST_DIR env var required}"
+mkdir -p "$DIST_DIR"
+
+# TODO: replace this stub with your stack-specific build commands.
+# Example: python -m build --outdir "$DIST_DIR"
+echo "$VERSION" > "$DIST_DIR/version.txt"
+
+# Build manifest with sha256 for every file in DIST_DIR (except manifest.json itself).
+python3 - <<'PY'
+import hashlib, json, os, sys
+dist = os.environ["DIST_DIR"]
+version = os.environ["VERSION"]
+entries = []
+for name in sorted(os.listdir(dist)):
+    path = os.path.join(dist, name)
+    if not os.path.isfile(path) or name == "manifest.json":
+        continue
+    with open(path, "rb") as f:
+        h = hashlib.sha256(f.read()).hexdigest()
+    entries.append({"filename": name, "sha256": h, "size": os.path.getsize(path)})
+with open(os.path.join(dist, "manifest.json"), "w") as f:
+    json.dump({"version": version, "artifacts": entries}, f, indent=2)
+print(f"Wrote manifest with {len(entries)} artifact(s)")
+PY

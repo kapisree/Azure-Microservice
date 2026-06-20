@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+: "${VERSION:?}" "${DIST_DIR:?}"
+mkdir -p "$DIST_DIR"
+tar czf "$DIST_DIR/demo-greeting-$VERSION.tar.gz" src/demo_greeting verification/demo_greeting tests/demo_greeting
+python3 - <<'PY'
+import hashlib, json, os
+dist = os.environ["DIST_DIR"]; version = os.environ["VERSION"]
+entries = []
+for name in sorted(os.listdir(dist)):
+    p = os.path.join(dist, name)
+    if not os.path.isfile(p) or name == "manifest.json": continue
+    with open(p, "rb") as f:
+        entries.append({"filename": name, "sha256": hashlib.sha256(f.read()).hexdigest(), "size": os.path.getsize(p)})
+with open(os.path.join(dist, "manifest.json"), "w") as f:
+    json.dump({"version": version, "artifacts": entries}, f, indent=2)
+PY
