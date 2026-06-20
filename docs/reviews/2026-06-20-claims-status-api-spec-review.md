@@ -47,13 +47,13 @@ This is a fresh-eyes read of the SPECIFY-phase artifact before approval, not the
 
 ## Disposition
 
-| Finding | Severity | Recommended action | Where it lands |
+| Finding | Severity | Recommended action | Disposition |
 |---|---|---|---|
-| No TLS / no rate limiting / full-dump list endpoint, framed as claims/healthcare pattern | High | Add explicit "not production/PHI-safe as-is" caveat to spec now (doc fix); carry the underlying gap into the ARCHITECTURE threat model as a named trust boundary | Spec Risks section + ADR/threat-model (ARCHITECTURE phase) |
-| Missing resource requests/limits, missing image/dependency scanning | Medium | Fold into REQ-305 and REQ-307 acceptance criteria before PLAN | Spec Functional Requirements |
-| Insurance vertical (health vs. generic) unresolved | Medium | One-line resolution in spec (Assumptions or Compliance) | Spec |
-| ACR SKU / retention, namespace, LB SKU/quota unspecified | Low | Add to Open Questions alongside the existing node-size placeholder | Spec Open Questions |
-| Status enum is a simplification; bare GUID assumes out-of-band pairing | Low | One line each under Non-Goals / Assumptions | Spec |
+| No TLS / no rate limiting / full-dump list endpoint, framed as claims/healthcare pattern | High | Add explicit "not production/PHI-safe as-is" caveat to spec now (doc fix); carry the underlying gap into the ARCHITECTURE threat model as a named trust boundary | **fixed (spec):** Risks section rewritten with explicit "not production- or PHI-safe as written" caveat. Threat model (ARCHITECTURE phase) must still carry this forward as a named trust boundary. |
+| Missing resource requests/limits, missing image/dependency scanning | Medium | Fold into REQ-305 and REQ-307 acceptance criteria before PLAN | **fixed:** REQ-305 now requires CPU/memory requests+limits and a dedicated namespace; REQ-307 now requires an unconditional dependency/image vulnerability scan. |
+| Insurance vertical (health vs. generic) unresolved | Medium | One-line resolution in spec (Assumptions or Compliance) | **fixed:** Compliance section now states the domain is deliberately generic/non-health-specific and HIPAA is treated as not applicable to this version, with an explicit "do not reuse with real/PHI data as-is" caveat. |
+| ACR SKU / retention, namespace, LB SKU/quota unspecified | Low | Add to Open Questions alongside the existing node-size placeholder | **fixed:** Open Questions #3 (ACR SKU/retention) and #4 (LB SKU/quota) added; namespace resolved directly in REQ-305 rather than left open. |
+| Status enum is a simplification; bare GUID assumes out-of-band pairing | Low | One line each under Non-Goals / Assumptions | **fixed:** Won't Have gained a line naming the status enum as a deliberate simplification; Assumptions gained a line on out-of-band claimId acquisition. |
 
 None of these are blocking — they're all cheap to fix in the spec text itself before it leaves draft status. The High finding is a documentation-honesty fix, not a design change: it doesn't require re-architecting anything in this draft, just naming the gap instead of letting the existing "Low severity" risk rating understate it.
 

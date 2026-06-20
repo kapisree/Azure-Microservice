@@ -56,9 +56,9 @@ This repo's pipeline has only ever been exercised end-to-end against a pure-func
 - **REQ-302:** `GET /health` returns `200 OK` with a trivial body (e.g. `{ "status": "healthy" }`), unconditionally — used as the Kubernetes liveness and readiness probe target.
 - **REQ-303:** A multi-stage Dockerfile builds and runs the API as a non-root user, listening on port 8080, using the .NET SDK image to build/publish and the ASP.NET runtime image to run.
 - **REQ-304:** Bicep templates provision an Azure Container Registry (admin access disabled) and an AKS cluster (system-assigned managed identity, RBAC enabled), with the AKS cluster's identity granted `AcrPull` on the registry — no static registry credentials anywhere in infra or CI.
-- **REQ-305:** A Kubernetes `Deployment` manifest runs the container image with `livenessProbe` and `readinessProbe` both targeting `GET /health`.
+- **REQ-305:** A Kubernetes `Deployment` manifest runs the container image with `livenessProbe` and `readinessProbe` both targeting `GET /health`, and with CPU/memory `requests` and `limits` set on the container (so a single pod cannot starve its node or be OOM-killed unpredictably under load), in a dedicated namespace (e.g. `claims-api`) rather than `default`.
 - **REQ-306:** A Kubernetes `Service` of type `LoadBalancer` exposes the Deployment on port 80, forwarding to container port 8080.
-- **REQ-307:** A GitHub Actions workflow runs `dotnet restore`/`build`/`test` on every push and pull request, independent of any Azure access.
+- **REQ-307:** A GitHub Actions workflow runs `dotnet restore`/`build`/`test`, plus a dependency/image vulnerability scan (e.g. `dotnet list package --vulnerable` and/or a registry-side image scan), on every push and pull request, independent of any Azure access — the scan step doesn't need Azure credentials, so it isn't gated like the deploy stages.
 - **REQ-308:** The same GitHub Actions workflow additionally builds and pushes the container image to ACR and applies the Bicep templates and Kubernetes manifests, but only when the required Azure OIDC secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) are present; when absent, these steps are skipped (not failed).
 
 > No requirement in this spec is tagged `[verifiable]`/`[verifiable-model]` — none of this surface involves authentication, payment calculation, data-integrity state machines, or cryptography in a way that warrants a Dafny contract model (per `art-formal-verification`'s tagging guidance). Verification is TDD-only: every REQ above is covered by a corresponding test named in the implementation plan.
@@ -72,12 +72,14 @@ This repo's pipeline has only ever been exercised end-to-end against a pure-func
 - A real claims data source (database or external system integration).
 - Pagination, filtering, or sorting on `GET /claims`.
 - Multi-region or HA AKS topology, custom VNet, private cluster, service mesh, autoscaling tuning, or a metrics/tracing stack.
+- TLS/HTTPS termination, rate limiting, and any access auditing — see the explicit caveat under Risks: this surface is **not production- or PHI-safe as-is**.
+- Modeling the full real-world claims-adjudication lifecycle: `ClaimStatus` is a simplified subset (no partial approvals, no "additional info requested" / pended state, no appeals path). This is a deliberate simplification for a small reference service, not a domain-accurate model.
 
 ## Non-Functional Requirements
 - **Performance:** No specific latency/throughput target — in-memory lookups are not expected to be a bottleneck at this scale.
 - **Security:** No static cloud credentials in CI (OIDC federated identity only); no registry admin credentials (managed identity `AcrPull` only); no secrets or PII in the seeded sample data.
 - **Scalability:** Out of scope — single small node pool, no autoscaling configuration.
-- **Compliance:** None specified for this version (no real claimant data; sample/synthetic data only).
+- **Compliance:** This spec deliberately does not commit to an insurance line of business (health/medical vs. auto/property, etc.) — `Claim`/`ClaimStatus` are generic, not health-specific. Because no real claimant data ever enters the system (synthetic/seeded only) and the domain is left unspecified, HIPAA and other PHI-handling regulations are treated as **not applicable to this version**. If this pattern is ever reused with real claimant or health data, TLS, authentication, rate limiting, and access auditing (none of which exist in this version — see Risks) must be added first; this spec is not a template for a PHI-bearing service as written.
 
 ## Verification Identification
 
@@ -92,11 +94,14 @@ Two tags exist per `art-formal-verification`: `[verifiable]` (Dafny proof + runt
 ## Open Questions
 1. This session has no live Azure subscription — the Bicep templates and the deploy stages of the GitHub Actions workflow can be written and code-reviewed, but cannot be exercised against real Azure infrastructure until credentials are provisioned out-of-band. Validating REQ-304/305/306/308 against a live cluster is deferred to whoever has subscription access.
 2. Exact AKS node size/count (`Standard_B2s` ×1–2, proposed during brainstorming) is a placeholder default — confirm against actual budget constraints before RELEASE.
+3. ACR SKU (Basic/Standard/Premium) and image retention/cleanup policy are unspecified — default to Basic with no retention policy for this demo unless told otherwise before PLAN.
+4. Azure now defaults `LoadBalancer` Services to a Standard SKU load balancer, which has its own cost and regional quota — confirm this is acceptable, alongside the node-size question above, before provisioning against a real subscription.
 
 ## Assumptions
 - A target Azure subscription and resource group will be supplied externally; this spec's Bicep templates are subscription-agnostic (parameterized), not hardcoded to a specific tenant.
 - GitHub Actions OIDC federation with Azure AD will be configured manually (`azure/login` action prerequisites) outside this repo's automation — this spec only consumes the resulting secrets.
+- Callers already possess a claim's `claimId` (GUID) from some other system before calling this API — this spec does not define how a caller learns a claimId in the first place (e.g. no claimant/policy-scoped search), consistent with the "Minimal" response-shape decision and the non-goal of omitting claimant/policy data.
 
 ## Risks
 - **Risk:** Bicep/AKS/pipeline stages are unvalidated against real Azure until credentials exist. **Severity:** Medium. **Mitigation:** Code review + `az bicep build`/`what-if` (static validation) in CI as a cheap, credential-free correctness check; full validation deferred per Open Questions.
-- **Risk:** `LoadBalancer` exposes the API on a public IP with no authentication. **Severity:** Low for this demo scope (no real data, explicitly out of scope per Non-Goals), but worth flagging now so it surfaces again at the SECURITY phase rather than being assumed away. **Mitigation:** Threat model (ARCHITECTURE phase) should treat the public endpoint as a trust boundary even though v1 has no auth.
+- **Risk:** The service is exposed over plain HTTP (no TLS) on a public `LoadBalancer` IP, with no authentication, no rate limiting, and an unauthenticated `GET /claims` that returns every seeded record in one request — i.e. anyone with the IP can scrape the entire dataset, not merely guess one id. **Severity:** Low *today*, and only because that's a documentation promise, not a code-enforced control: the data is synthetic and real data is explicitly a non-goal (see Compliance). That promise can be broken by a future change without this spec's controls catching it. **This surface is not production- or PHI-safe as written — do not reuse this pattern with real claimant or health data without first adding TLS, authentication, rate limiting, and access auditing.** **Mitigation:** Threat model (ARCHITECTURE phase) must treat the public endpoint as a trust boundary now, not defer it; this spec's "Low" rating should be re-examined the moment any real or sensitive data is considered.
