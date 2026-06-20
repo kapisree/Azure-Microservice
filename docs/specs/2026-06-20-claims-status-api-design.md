@@ -1,9 +1,9 @@
 ---
 type: spec
 phase: SPEC
-status: draft
+status: accepted
 created: "2026-06-20"
-approved_by: ""
+approved_by: "kapisree (PR #1 merge)"
 supersedes: ""
 extends: ""
 superseded_by: ""

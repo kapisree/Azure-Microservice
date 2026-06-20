@@ -23,8 +23,9 @@ only (`art-test-first`).
 ## Components
 
 - **api** — ASP.NET Core Minimal API (`ClaimsApi`) mapping
-  `GET /claims/{claimId}`, `GET /claims`, `GET /health` to handlers
-  backed by `IClaimsRepository` (ADR-002).
+  `GET /claims/{claimId}` and `GET /claims` to handlers backed by
+  `IClaimsRepository` (ADR-002); `GET /health` returns a static body
+  unconditionally and does not consult the repository.
 - **container** — multi-stage Dockerfile (REQ-303): SDK image builds and
   publishes, ASP.NET runtime image runs as a non-root user on port 8080.
 - **infra** — Bicep templates (REQ-304) provisioning ACR (admin

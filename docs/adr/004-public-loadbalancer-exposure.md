@@ -24,7 +24,8 @@ Keep the `LoadBalancer` `Service` (REQ-306) as specified, but formally
 record the resulting exposure as **trust boundary `tb-1`** in the threat
 model (`docs/architecture/2026-06-20-claims-status-api-threat-model.md`),
 with STRIDE coverage for every external data-flow element it exposes
-(`dfe-1` claimId lookup, `dfe-2` full-dataset list). The architectural
+(`dfe-1` claimId lookup, `dfe-2` full-dataset list, `dfe-3` health
+check). The architectural
 decision is to **accept** this boundary's current risk for v1 — not to
 add TLS/auth/rate-limiting now — because:
 1. The spec's Won't Have section already excludes auth, TLS, and rate
