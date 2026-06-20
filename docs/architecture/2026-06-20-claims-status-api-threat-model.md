@@ -34,7 +34,7 @@ stride_per_element:
   dfe-1: [T, I, D]
   dfe-2: [I, D]
   dfe-3: [D]
-  dfe-4: [S, T]
+  dfe-4: [S, T, E]
 ---
 
 # Claims Status API — Threat Model
@@ -124,10 +124,28 @@ stride_per_element:
     GitHub branch-protection/required-review on workflow file changes
     (operational control, outside this spec's scope) is the relevant
     mitigation layer.
+  - **E (Elevation of Privilege):** spoofing or tampering with this
+    exchange is not the end state — it's the path to the actual
+    consequence, which is privilege gain: whoever controls the deploy
+    identity can modify AKS/ACR infrastructure or push arbitrary images,
+    privileges far beyond reading claim data. Listed separately from
+    `S`/`T` above because the identity-spoofing step and the
+    privilege-gain outcome are distinct stages an attacker must
+    complete, not one event. Mitigation: same as `S`/`T` — OIDC scoping
+    and no static secret bound how the exchange can be reached; nothing
+    in this spec additionally constrains what the deploy identity itself
+    is authorized to do once assumed (that authorization scope is set by
+    the Azure RBAC role assignment, outside this spec's templates).
 
 `dfe-5` (aks-acr-image-pull) is internal (`external: false`) and has no
 STRIDE entry per the frontmatter contract — see Trust boundaries above
 for its control (managed identity `AcrPull`, no static credential).
+It is nonetheless the boundary where the `container-image` asset's
+Tampering risk (a vulnerable or modified image being pulled and run)
+actually lives — recorded here, not in `stride_per_element`, since that
+frontmatter field is scoped to `external: true` elements only. A
+SECURITY-phase finding about image integrity (CWE-1104 / OWASP A06)
+should cite `tb-3`/`dfe-5` for this reason.
 
 No element in this threat model carries an **R (Repudiation)** rating.
 This is a deliberate omission, not an oversight: the API is entirely

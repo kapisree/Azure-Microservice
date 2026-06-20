@@ -16,9 +16,8 @@ convergent finding #1) rated the resulting exposure — plain HTTP, no
 auth, no rate limiting, and a full-dataset-dump `GET /claims` — **High**
 severity, and the spec's own Risks section flagged that the
 ARCHITECTURE threat model "must still carry this forward as a named
-trust boundary," not silently re-defer it. The verifier's review of PR
-#1 (Finding 2) repeated this as an open obligation. This ADR is where
-that obligation gets formally discharged at the ARCHITECTURE layer.
+trust boundary," not silently re-defer it. This ADR is where that
+obligation gets formally discharged at the ARCHITECTURE layer.
 
 ## Decision
 Keep the `LoadBalancer` `Service` (REQ-306) as specified, but formally
@@ -38,6 +37,17 @@ add TLS/auth/rate-limiting now — because:
    written** in the spec's Risks section and in `Won't Have`, so a
    future reuse of this pattern with real data requires revisiting this
    ADR, not silently inheriting it.
+
+**This acceptance is provisional, not a settled disposition.** Per
+`art-threat-driven-security`, the binding severity for `tb-1`/`dfe-1`/
+`dfe-2` is the CVSS v4.0 base score a second reviewer assigns during the
+SECURITY phase — not this ADR's informal "accept for v1" framing. If
+that scoring lands **critical or high**, `art-threat-driven-security`
+requires the finding reach `status: fixed` (it cannot be accepted or
+deferred), which overrides this ADR's stance: the back-edge protocol
+(`.claude/rules/review-gate.md`) triggers, and the fix (not this
+acceptance) becomes binding. This ADR's "accept" stance is only
+honorable if SECURITY scores the exposure ≤ medium.
 
 ## Consequences
 - The exposure is no longer an undocumented gap deferred indefinitely —

@@ -36,7 +36,7 @@ Actions. The platform/DevOps persona's success criterion is "no manual
 - Crosses a trust boundary at the OIDC token exchange (GitHub Actions ⟷
   Azure AD) — carried into the threat model
   (`docs/architecture/2026-06-20-claims-status-api-threat-model.md`) as
-  `dfe-4`.
+  `tb-2` (the data-flow element it carries is `dfe-4`).
 
 ## Alternatives Considered
 - **ACR admin credentials + Kubernetes `imagePullSecret`**: rejected —
