@@ -14,15 +14,27 @@ REQ-307, REQ-308 (per ADR-003); REQ-305, REQ-306 (per ADR-004).
 This plan consumes the ARCHITECTURE-phase decisions (ADR-002/003/004) as
 given — it does not re-derive the Minimal API shape, the managed-identity
 model, or the LoadBalancer-exposure acceptance. It describes intent and
-ordering only. Runnable code, test bodies, Bicep/YAML content, and the
-workflow file live in the IMPLEMENT phase, on a branch named
-`impl/plan-1-claims-status-api`, one task at a time, TDD-first
-(`art-test-first`) wherever a REQ describes runtime *behavior* (REQ-300/
-301/302). REQ-303–308 describe infrastructure artifacts (container,
-Bicep, k8s manifests, CI workflow) that have no unit-testable behavior of
-their own; for those, "done" means the static/credential-free validation
-named in the spec's Success Metrics (`docker build`, `az bicep build`,
-`kubectl --dry-run=client`, workflow YAML lint) passes, not an xUnit test.
+ordering only.
+
+**The runnable test code and implementation code for REQ-300/301/302
+live in the IMPLEMENT phase, never in this PLAN document** — same rule
+the demo plan follows (`docs/plans/2026-05-28-demo-greeting-plan.md`).
+Embedding the test assertions and the handler bodies here would let an
+implementer transcribe the answer instead of practicing TDD, which
+violates `art-test-first` in substance even if the ceremony (write test,
+watch it fail, then implement) is still followed. Below, each API task
+states *what the test must verify* and *what the implementation must do*
+in prose plus exact signatures/contracts — never the test or
+implementation body itself.
+
+REQ-303–308 describe infrastructure artifacts (container, Bicep, k8s
+manifests, CI workflow) that have no unit-testable behavior of their
+own — there is no failing test to write first for a Dockerfile. For
+those, this plan does show the actual file content, because the
+"answer to skip" concern doesn't apply: "done" is the static,
+credential-free validation named in the spec's Success Metrics
+(`docker build`, `az bicep build`, `kubectl --dry-run=client`, workflow
+YAML lint), not a test an implementer could instead just copy.
 
 No requirement in this spec is `[verifiable]`/`[verifiable-model]`
 (spec's Verification Identification section, ADR-002's consequences) —
@@ -36,18 +48,26 @@ doesn't apply here.
   `dotnet build`/`dotnet format`/`dotnet test` (invoked with no project
   argument by `scripts/quality-gates-other.sh`) resolve unambiguously
   from the repo root.
-- `src/ClaimsApi/ClaimsApi.csproj` — `Microsoft.NET.Sdk.Web`, `net8.0`.
+- `src/ClaimsApi/ClaimsApi.csproj` — `Microsoft.NET.Sdk.Web`, `net8.0`
+  (current LTS; this dev environment's installed SDK is 10.0.301, which
+  builds older TFMs as long as the matching targeting pack is present —
+  verified in Task P1, Step 0, rather than assumed).
 - `src/ClaimsApi/Program.cs` — Minimal API host; top-level statements
   plus a trailing `public partial class Program { }` so
   `WebApplicationFactory<Program>` in the test project can see it
-  (the standard ASP.NET Core minimal-hosting test pattern).
+  (the standard ASP.NET Core minimal-hosting test pattern — this is
+  test-harness plumbing, not REQ behavior, so it's scaffolded directly
+  in Task P1 rather than TDD'd).
 - `src/ClaimsApi/ClaimStatus.cs` — enum: `Submitted`, `UnderReview`,
   `Approved`, `Denied`, `Paid`.
 - `src/ClaimsApi/Claim.cs` — `record Claim(Guid ClaimId, ClaimStatus Status, DateTimeOffset LastUpdated)`.
 - `src/ClaimsApi/IClaimsRepository.cs` — the ADR-002 domain seam:
   `Claim? GetById(Guid claimId)`, `IReadOnlyList<Claim> GetAll()`.
 - `src/ClaimsApi/InMemoryClaimsRepository.cs` — `IClaimsRepository`
-  implementation seeding a fixed in-memory list at construction.
+  implementation seeding a fixed in-memory list at construction, using
+  fixed literal `Guid` values (not `Guid.NewGuid()`) so tests can
+  reference known ids deterministically instead of discovering them at
+  runtime through another endpoint.
 - `src/ClaimsApi/Dockerfile` — multi-stage build (REQ-303).
 - `tests/ClaimsApi.Tests/ClaimsApi.Tests.csproj` — `net8.0`, xUnit +
   `Microsoft.AspNetCore.Mvc.Testing`.
@@ -65,7 +85,16 @@ doesn't apply here.
   build/test/scan job) + REQ-308 (OIDC-gated push/provision/deploy job),
   per ADR-003. Kept separate from the existing `.github/workflows/ci.yml`
   (factory's own quality-gates check) and `verifier.yml` — this workflow
-  is product CI/CD, not factory governance.
+  is product CI/CD, not factory governance. **The deploy job's `if:`
+  additionally requires `github.ref == 'refs/heads/main'` — this is a
+  plan-level addition, not something ADR-003 itself specifies.** ADR-003
+  only names "OIDC secrets present" as the gating condition; restricting
+  to the `main` branch on top of that is this plan's call, to avoid a
+  same-repo PR run (which does have access to repo secrets, unlike a
+  fork PR) triggering a real Azure deploy. If a reviewer considers this
+  significant enough to be architectural, it should become an ADR-003
+  amendment rather than silently shipping as an implementation detail —
+  flagging it here so it's visible instead.
 
 ## Task P1: Solution and project scaffolding
 
@@ -74,6 +103,16 @@ a compilable, runnable host for later tasks to write failing tests
 against. `dotnet new` scaffolds; this is setup, not implementation, so
 `art-test-first` does not require a preceding failing test for it.
 
+0. **Verify the toolchain before relying on it**, rather than assuming:
+   `dotnet --list-sdks` and `dotnet --list-runtimes`. Confirm an SDK
+   capable of building `net8.0` is present (an SDK majorversion newer
+   than 8 — e.g. 10.x, confirmed installed in this environment — can
+   still target `net8.0` as long as the `Microsoft.NETCore.App` 8.x
+   runtime pack resolves; if `dotnet build` in Step 4 below fails with
+   a missing-targeting-pack error instead of a normal compile error,
+   that's the cause). `docker`, `az`, and `kubectl` are confirmed **not
+   installed** in this dev environment as of this plan's writing —
+   Tasks P6/P7/P8 already account for this; don't be surprised by it.
 1. From the repo root:
    ```
    dotnet new sln -n ClaimsApi
@@ -91,12 +130,13 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
    public partial class Program { }
    ```
-3. Delete the template's default `WeatherForecast`-style scaffolding if
-   `dotnet new web` generated any (it shouldn't for the `web` template,
-   but confirm `src/ClaimsApi/` contains only `ClaimsApi.csproj` and
-   `Program.cs` before continuing).
-4. Run `dotnet build` from the repo root. Expected: build succeeds, zero
-   warnings about ambiguous startup.
+   This is the minimum host needed to compile and run with zero routes
+   — it contains no REQ behavior, only the `WebApplicationFactory<Program>`
+   test-visibility hook.
+3. Confirm `src/ClaimsApi/` contains only `ClaimsApi.csproj` and
+   `Program.cs` (the `web` template shouldn't generate extra
+   `WeatherForecast`-style scaffolding, but check).
+4. Run `dotnet build` from the repo root. Expected: build succeeds.
 5. Commit:
    ```
    git add ClaimsApi.sln src/ClaimsApi tests/ClaimsApi.Tests
@@ -105,38 +145,23 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
 ## Task P2: `GET /health` (REQ-302)
 
-- [ ] **Step 1: Write the failing test** in
-  `tests/ClaimsApi.Tests/HealthEndpointTests.cs`:
-  ```csharp
-  using System.Net;
-  using Microsoft.AspNetCore.Mvc.Testing;
-  using Xunit;
+**Test to write first:** Using `WebApplicationFactory<Program>`, issue
+`GET /health` against the test client. Assert the response status is
+`200 OK` and the JSON body's `status` field equals `"healthy"`
+(REQ-302's literal example body, `{ "status": "healthy" }`).
 
-  public class HealthEndpointTests
-  {
-      [Fact]
-      public async Task Health_ReturnsOk_WithHealthyBody()
-      {
-          using var factory = new WebApplicationFactory<Program>();
-          using var client = factory.CreateClient();
-
-          var response = await client.GetAsync("/health");
-
-          Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-          var body = await response.Content.ReadAsStringAsync();
-          Assert.Contains("\"status\":\"healthy\"", body);
-      }
-  }
-  ```
-- [ ] **Step 2: Run it, confirm it fails** — `dotnet test`. Expected:
-  FAIL (404, no `/health` route mapped yet).
-- [ ] **Step 3: Implement the minimal route** in `Program.cs`, between
-  `builder.Build()` and `app.Run()`:
-  ```csharp
-  app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
-  ```
-- [ ] **Step 4: Run `dotnet test`, confirm it passes.**
-- [ ] **Step 5: Commit:**
+- [ ] **Step 1:** Write that test in
+  `tests/ClaimsApi.Tests/HealthEndpointTests.cs`.
+- [ ] **Step 2:** Run `dotnet test`. Confirm it **fails** — no
+  `/health` route is mapped yet, so the request 404s.
+- [ ] **Step 3:** Implement the minimal route in `Program.cs` (between
+  `builder.Build()` and `app.Run()`): map `GET /health` to a handler
+  that unconditionally returns `200 OK` with a body whose `status`
+  property is `"healthy"` — no dependency on `IClaimsRepository` (the
+  overview's component description is explicit about this:
+  `docs/architecture/2026-06-20-claims-status-api-overview.md`).
+- [ ] **Step 4:** Run `dotnet test`, confirm it passes.
+- [ ] **Step 5:** Commit:
   ```
   git add src/ClaimsApi/Program.cs tests/ClaimsApi.Tests/HealthEndpointTests.cs
   git commit -m "feat(claims-api): GET /health (REQ-302)"
@@ -144,85 +169,38 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
 ## Task P3: Domain model + `IClaimsRepository` seam (per ADR-002)
 
-- [ ] **Step 1: Write the failing unit tests** in
-  `tests/ClaimsApi.Tests/InMemoryClaimsRepositoryTests.cs`:
-  ```csharp
-  using Xunit;
+**Produces (signatures later tasks depend on):**
+- `enum ClaimStatus { Submitted, UnderReview, Approved, Denied, Paid }`
+- `record Claim(Guid ClaimId, ClaimStatus Status, DateTimeOffset LastUpdated)`
+- `interface IClaimsRepository { Claim? GetById(Guid claimId); IReadOnlyList<Claim> GetAll(); }`
+- `class InMemoryClaimsRepository : IClaimsRepository` — seeds exactly
+  five claims at construction, one per `ClaimStatus` value, keyed by
+  these fixed literal ids (use exactly these GUIDs, not generated
+  ones, so Tasks P4/P5's tests can reference a known id without first
+  calling `GET /claims`):
+  - `3fa85f64-5717-4562-b3fc-2c963f66afa6` → `Submitted`
+  - `7c9e6679-7425-40de-944b-e07fc1f90ae7` → `UnderReview`
+  - `f47ac10b-58cc-4372-a567-0e02b2c3d479` → `Approved`
+  - `9b2e815c-5a91-4d5c-8b16-13b8b1b3c3a1` → `Denied`
+  - `d290f1ee-6c54-4b01-90e6-d701748f0851` → `Paid`
 
-  public class InMemoryClaimsRepositoryTests
-  {
-      [Fact]
-      public void GetAll_ReturnsSeededClaims_NonEmpty()
-      {
-          var repo = new InMemoryClaimsRepository();
-          Assert.NotEmpty(repo.GetAll());
-      }
+**Tests to write first** in
+`tests/ClaimsApi.Tests/InMemoryClaimsRepositoryTests.cs`:
+1. `GetAll()` returns all five seeded claims.
+2. `GetById()` with one of the five fixed ids above (e.g.
+   `3fa85f64-5717-4562-b3fc-2c963f66afa6`) returns the claim with that
+   id and the expected `ClaimStatus`.
+3. `GetById()` with a freshly generated `Guid.NewGuid()` (guaranteed
+   not to collide with the five fixed seed ids) returns `null`.
 
-      [Fact]
-      public void GetById_KnownId_ReturnsMatchingClaim()
-      {
-          var repo = new InMemoryClaimsRepository();
-          var seeded = repo.GetAll()[0];
-
-          var found = repo.GetById(seeded.ClaimId);
-
-          Assert.NotNull(found);
-          Assert.Equal(seeded.ClaimId, found!.ClaimId);
-      }
-
-      [Fact]
-      public void GetById_UnknownId_ReturnsNull()
-      {
-          var repo = new InMemoryClaimsRepository();
-          Assert.Null(repo.GetById(Guid.NewGuid()));
-      }
-  }
-  ```
-- [ ] **Step 2: Run `dotnet test`, confirm it fails** (types don't
-  exist yet — compile error counts as a failing test for this purpose).
-- [ ] **Step 3: Implement** `src/ClaimsApi/ClaimStatus.cs`:
-  ```csharp
-  public enum ClaimStatus
-  {
-      Submitted,
-      UnderReview,
-      Approved,
-      Denied,
-      Paid
-  }
-  ```
-  `src/ClaimsApi/Claim.cs`:
-  ```csharp
-  public record Claim(Guid ClaimId, ClaimStatus Status, DateTimeOffset LastUpdated);
-  ```
-  `src/ClaimsApi/IClaimsRepository.cs`:
-  ```csharp
-  public interface IClaimsRepository
-  {
-      Claim? GetById(Guid claimId);
-      IReadOnlyList<Claim> GetAll();
-  }
-  ```
-  `src/ClaimsApi/InMemoryClaimsRepository.cs`:
-  ```csharp
-  public class InMemoryClaimsRepository : IClaimsRepository
-  {
-      private readonly List<Claim> _claims = new()
-      {
-          new Claim(Guid.NewGuid(), ClaimStatus.Submitted, DateTimeOffset.UtcNow.AddDays(-5)),
-          new Claim(Guid.NewGuid(), ClaimStatus.UnderReview, DateTimeOffset.UtcNow.AddDays(-3)),
-          new Claim(Guid.NewGuid(), ClaimStatus.Approved, DateTimeOffset.UtcNow.AddDays(-1)),
-          new Claim(Guid.NewGuid(), ClaimStatus.Denied, DateTimeOffset.UtcNow.AddDays(-2)),
-          new Claim(Guid.NewGuid(), ClaimStatus.Paid, DateTimeOffset.UtcNow),
-      };
-
-      public Claim? GetById(Guid claimId) => _claims.FirstOrDefault(c => c.ClaimId == claimId);
-
-      public IReadOnlyList<Claim> GetAll() => _claims;
-  }
-  ```
-- [ ] **Step 4: Run `dotnet test`, confirm all three pass.**
-- [ ] **Step 5: Commit:**
+- [ ] **Step 1:** Write the three tests above.
+- [ ] **Step 2:** Run `dotnet test`, confirm it fails (the types don't
+  exist yet — a compile error counts as "failing" here).
+- [ ] **Step 3:** Implement `ClaimStatus.cs`, `Claim.cs`,
+  `IClaimsRepository.cs`, `InMemoryClaimsRepository.cs` per the
+  signatures and fixed seed ids above.
+- [ ] **Step 4:** Run `dotnet test`, confirm all three pass.
+- [ ] **Step 5:** Commit:
   ```
   git add src/ClaimsApi/ClaimStatus.cs src/ClaimsApi/Claim.cs src/ClaimsApi/IClaimsRepository.cs src/ClaimsApi/InMemoryClaimsRepository.cs tests/ClaimsApi.Tests/InMemoryClaimsRepositoryTests.cs
   git commit -m "feat(claims-api): domain model + IClaimsRepository seam (ADR-002)"
@@ -230,96 +208,34 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
 ## Task P4: `GET /claims/{claimId}` (REQ-300)
 
-**Interfaces consumed:** `IClaimsRepository.GetById(Guid)` from Task P3.
+**Interfaces consumed:** `IClaimsRepository.GetById(Guid)` and the five
+fixed seed ids from Task P3 — this task no longer depends on Task P5's
+`GET /claims` to discover a valid id, since the seed ids are now fixed
+literals known at plan-writing time.
 
-- [ ] **Step 1: Write the failing integration tests** in
-  `tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs`:
-  ```csharp
-  using System.Net;
-  using Microsoft.AspNetCore.Mvc.Testing;
-  using Xunit;
+**Tests to write first** in
+`tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs`:
+1. `GET /claims/not-a-guid` → `400 Bad Request`, RFC 9457
+   problem-details body, `detail` states the id is not a valid GUID.
+2. `GET /claims/{a freshly generated Guid.NewGuid()}` → `404 Not Found`,
+   problem-details body, `detail` states no claim was found.
+3. `GET /claims/3fa85f64-5717-4562-b3fc-2c963f66afa6` (one of Task P3's
+   fixed seed ids) → `200 OK`, body `{ claimId, status, lastUpdated }`
+   with `status` equal to the string `"Submitted"`.
 
-  public class ClaimsEndpointsTests
-  {
-      private static WebApplicationFactory<Program> CreateFactory() => new();
-
-      [Fact]
-      public async Task GetClaimById_MalformedGuid_Returns400ProblemDetails()
-      {
-          using var factory = CreateFactory();
-          using var client = factory.CreateClient();
-
-          var response = await client.GetAsync("/claims/not-a-guid");
-
-          Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-      }
-
-      [Fact]
-      public async Task GetClaimById_UnknownGuid_Returns404ProblemDetails()
-      {
-          using var factory = CreateFactory();
-          using var client = factory.CreateClient();
-
-          var response = await client.GetAsync($"/claims/{Guid.NewGuid()}");
-
-          Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-      }
-
-      [Fact]
-      public async Task GetClaimById_KnownGuid_Returns200WithClaimBody()
-      {
-          using var factory = CreateFactory();
-          using var client = factory.CreateClient();
-
-          var all = await (await client.GetAsync("/claims")).Content.ReadAsStringAsync();
-          // Extract a real claimId from the list to avoid hardcoding seed data here.
-          var firstId = System.Text.Json.JsonDocument.Parse(all).RootElement[0]
-              .GetProperty("claimId").GetGuid();
-
-          var response = await client.GetAsync($"/claims/{firstId}");
-
-          Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-          var body = await response.Content.ReadAsStringAsync();
-          Assert.Contains("\"status\"", body);
-      }
-  }
-  ```
-  (The third test depends on `GET /claims` from Task P5 to fetch a real
-  id; if P5 isn't implemented yet, this one test will also fail for
-  that reason — acceptable, since both endpoints land before this task
-  is considered done. Run both together; do not mark P4 complete until
-  all three pass.)
-- [ ] **Step 2: Run `dotnet test`, confirm `GetClaimById_*` tests fail**
-  (no `/claims/{claimId}` route yet).
-- [ ] **Step 3: Implement** in `Program.cs`, registering the repository
-  and mapping the route:
-  ```csharp
-  builder.Services.AddSingleton<IClaimsRepository, InMemoryClaimsRepository>();
-  ```
-  ```csharp
-  app.MapGet("/claims/{claimId}", (string claimId, IClaimsRepository repo) =>
-  {
-      if (!Guid.TryParse(claimId, out var id))
-      {
-          return Results.Problem(
-              detail: $"'{claimId}' is not a valid GUID.",
-              statusCode: StatusCodes.Status400BadRequest);
-      }
-
-      var claim = repo.GetById(id);
-      if (claim is null)
-      {
-          return Results.Problem(
-              detail: $"No claim found for id '{id}'.",
-              statusCode: StatusCodes.Status404NotFound);
-      }
-
-      return Results.Ok(new { claimId = claim.ClaimId, status = claim.Status.ToString(), lastUpdated = claim.LastUpdated });
-  });
-  ```
-- [ ] **Step 4: Run `dotnet test`, confirm it passes** (once P5 also
-  lands `GET /claims`).
-- [ ] **Step 5: Commit:**
+- [ ] **Step 1:** Write the three tests above.
+- [ ] **Step 2:** Run `dotnet test`, confirm all three fail (no
+  `/claims/{claimId}` route yet).
+- [ ] **Step 3:** Implement the route in `Program.cs`: register
+  `IClaimsRepository` in DI (`AddSingleton<IClaimsRepository, InMemoryClaimsRepository>()`),
+  then map `GET /claims/{claimId}` to a handler that: parses the route
+  parameter as a `Guid` (400 + problem-details on parse failure, per
+  test 1); looks it up via `IClaimsRepository.GetById` (404 +
+  problem-details if `null`, per test 2); otherwise returns `200 OK`
+  with `{ claimId, status, lastUpdated }` where `status` is the enum
+  value's string name (per test 3 and REQ-300's exact body shape).
+- [ ] **Step 4:** Run `dotnet test`, confirm all three pass.
+- [ ] **Step 5:** Commit:
   ```
   git add src/ClaimsApi/Program.cs tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs
   git commit -m "feat(claims-api): GET /claims/{claimId} (REQ-300)"
@@ -329,33 +245,21 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
 **Interfaces consumed:** `IClaimsRepository.GetAll()` from Task P3.
 
-- [ ] **Step 1: Add the failing test** to
-  `tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs`:
-  ```csharp
-  [Fact]
-  public async Task GetClaims_Returns200WithArrayOfAllSeededClaims()
-  {
-      using var factory = CreateFactory();
-      using var client = factory.CreateClient();
+**Test to write first:** `GET /claims` → `200 OK`, JSON array of all
+five seeded claims, same per-element shape as Task P4's single-claim
+body (`{ claimId, status, lastUpdated }`).
 
-      var response = await client.GetAsync("/claims");
-
-      Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-      var body = await response.Content.ReadAsStringAsync();
-      var array = System.Text.Json.JsonDocument.Parse(body).RootElement;
-      Assert.True(array.GetArrayLength() >= 1);
-  }
-  ```
-- [ ] **Step 2: Run `dotnet test`, confirm it fails** (404, no
-  `/claims` route).
-- [ ] **Step 3: Implement** in `Program.cs`:
-  ```csharp
-  app.MapGet("/claims", (IClaimsRepository repo) =>
-      Results.Ok(repo.GetAll().Select(c => new { claimId = c.ClaimId, status = c.Status.ToString(), lastUpdated = c.LastUpdated })));
-  ```
-- [ ] **Step 4: Run `dotnet test`, confirm every test in the project
-  passes** (this also unblocks Task P4's third test).
-- [ ] **Step 5: Commit:**
+- [ ] **Step 1:** Write that test in
+  `tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs`.
+- [ ] **Step 2:** Run `dotnet test`, confirm it fails (no `/claims`
+  route yet).
+- [ ] **Step 3:** Implement `GET /claims` in `Program.cs`: map to a
+  handler that returns `200 OK` with the full `IClaimsRepository.GetAll()`
+  result, projected to the same `{ claimId, status, lastUpdated }` shape
+  used in Task P4.
+- [ ] **Step 4:** Run `dotnet test`, confirm every test in the project
+  passes.
+- [ ] **Step 5:** Commit:
   ```
   git add src/ClaimsApi/Program.cs tests/ClaimsApi.Tests/ClaimsEndpointsTests.cs
   git commit -m "feat(claims-api): GET /claims (REQ-301)"
@@ -365,7 +269,10 @@ against. `dotnet new` scaffolds; this is setup, not implementation, so
 
 No xUnit test applies to a Dockerfile; "done" is the spec's own Success
 Metric #2 (`docker build` succeeds, container serves `/health` as 200
-locally).
+locally). `docker` is confirmed not installed in this dev environment
+(Task P1, Step 0) — write the file regardless; validation against a
+real Docker daemon is deferred to wherever that's available, same
+category as the spec's existing Open Questions about live Azure access.
 
 1. Write `src/ClaimsApi/Dockerfile`:
    ```dockerfile
@@ -387,7 +294,7 @@ locally).
    ENV ASPNETCORE_URLS=http://+:8080
    ENTRYPOINT ["dotnet", "ClaimsApi.dll"]
    ```
-2. From the repo root: `docker build -f src/ClaimsApi/Dockerfile -t claims-api:local .`
+2. Where Docker is available: `docker build -f src/ClaimsApi/Dockerfile -t claims-api:local .`
    Expected: image builds successfully.
 3. `docker run --rm -p 8080:8080 claims-api:local` then, in another
    terminal, `curl -i http://localhost:8080/health`. Expected: `200 OK`
@@ -403,7 +310,9 @@ locally).
 No xUnit test applies; "done" is `az bicep build` succeeding (the
 credential-free static check the spec's Risk mitigation names — full
 `az deployment group create` validation against a live subscription is
-explicitly deferred per the spec's Open Question #1).
+explicitly deferred per the spec's Open Question #1). `az` is confirmed
+not installed in this dev environment (Task P1, Step 0) — write the
+template regardless.
 
 1. Write `infra/bicep/main.bicep` parameterized (location, names) with:
    - An `Microsoft.ContainerRegistry/registries` resource,
@@ -415,11 +324,8 @@ explicitly deferred per the spec's Open Question #1).
      (`7f951dda-4ed3-4680-a7ca-43fe172d538d`) scoped to the ACR
      resource — this is the mechanism ADR-003 names for credential-free
      image pulls.
-2. Run `az bicep build --file infra/bicep/main.bicep`. Expected: compiles
-   to ARM JSON with no errors. (If the `az` CLI isn't installed in this
-   environment, note that as a deferred local-validation gap consistent
-   with the spec's existing Open Question #1 — do not skip writing the
-   template itself.)
+2. Where the `az` CLI is available: `az bicep build --file infra/bicep/main.bicep`.
+   Expected: compiles to ARM JSON with no errors.
 3. Commit:
    ```
    git add infra/bicep/main.bicep
@@ -430,7 +336,8 @@ explicitly deferred per the spec's Open Question #1).
 
 No xUnit test applies; "done" is `kubectl apply --dry-run=client -f
 infra/k8s/` succeeding (static manifest validation, no live cluster
-required).
+required). `kubectl` is confirmed not installed in this dev environment
+(Task P1, Step 0) — write the manifests regardless.
 
 1. Write `infra/k8s/namespace.yaml`:
    ```yaml
@@ -446,11 +353,8 @@ required).
    `targetPort: 8080`, `namespace: claims-api` — this is the exposure
    ADR-004 names as the accepted `tb-1` trust boundary; do not add
    auth/TLS here (out of scope per the spec's Won't Have).
-4. Run `kubectl apply --dry-run=client -f infra/k8s/`. Expected: all
-   three resources validate with no schema errors. (If `kubectl` isn't
-   installed locally, this is a deferred local-validation gap, same
-   category as Task P7's `az` dependency — write the manifests
-   regardless.)
+4. Where `kubectl` is available: `kubectl apply --dry-run=client -f infra/k8s/`.
+   Expected: all three resources validate with no schema errors.
 5. Commit:
    ```
    git add infra/k8s/
@@ -460,9 +364,10 @@ required).
 ## Task P9: GitHub Actions workflow (REQ-307/308, per ADR-003)
 
 No xUnit test applies; "done" is the workflow YAML being syntactically
-valid and the gating logic matching ADR-003 exactly (unconditional
-build/test/scan; deploy steps run only when OIDC secrets are present,
-skipped — not failed — otherwise).
+valid and the gating logic matching ADR-003 (unconditional build/test/
+scan; deploy steps run only when OIDC secrets are present, skipped —
+not failed — otherwise) **plus the plan-level branch restriction noted
+in the Files section above.**
 
 1. Write `.github/workflows/claims-api.yml`:
    ```yaml
@@ -493,6 +398,9 @@ skipped — not failed — otherwise).
        name: Push image, provision infra, deploy
        needs: build-test-scan
        runs-on: ubuntu-latest
+       # github.ref == 'refs/heads/main' is a plan-level addition beyond
+       # ADR-003's literal "OIDC secrets present" condition — see the
+       # Files section note above.
        if: ${{ github.ref == 'refs/heads/main' && secrets.AZURE_CLIENT_ID != '' }}
        permissions:
          id-token: write
@@ -514,10 +422,12 @@ skipped — not failed — otherwise).
              az aks get-credentials --resource-group claims-api-rg --name "${{ vars.AKS_NAME }}"
              kubectl apply -f infra/k8s/
    ```
-   `vars.ACR_NAME`/`vars.AKS_NAME` are repository variables (not
-   secrets — names aren't sensitive) set out-of-band, consistent with
-   the spec's Assumptions (subscription/resource group supplied
-   externally).
+   `vars.ACR_NAME`/`vars.AKS_NAME` are **repository variables, not
+   secrets** (names aren't sensitive) — they're set out-of-band by
+   whoever provisions the subscription/resource group, consistent with
+   the spec's Assumptions section ("A target Azure subscription and
+   resource group will be supplied externally"). No task in this plan
+   creates them; they're external configuration, not a plan deliverable.
 2. Validate YAML syntax: `python3 -c "import yaml, sys; yaml.safe_load(open('.github/workflows/claims-api.yml'))"`.
    Expected: no exception.
 3. Commit:
