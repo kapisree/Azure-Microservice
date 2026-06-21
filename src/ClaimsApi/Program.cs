@@ -6,6 +6,9 @@ var app = builder.Build();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
+app.MapGet("/claims", (IClaimsRepository repository) =>
+    Results.Ok(repository.GetAll().Select(c => new { claimId = c.ClaimId, status = c.Status.ToString(), lastUpdated = c.LastUpdated })));
+
 app.MapGet("/claims/{claimId}", (string claimId, IClaimsRepository repository) =>
 {
     if (!Guid.TryParse(claimId, out var id))

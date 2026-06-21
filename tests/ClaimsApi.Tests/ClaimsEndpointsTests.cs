@@ -36,6 +36,25 @@ public class ClaimsEndpointsTests
     }
 
     [Fact]
+    public async Task GetClaims_ReturnsOkWithAllFiveSeededClaims()
+    {
+        using var factory = new WebApplicationFactory<Program>();
+        using var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/claims");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync();
+        var body = JsonSerializer.Deserialize<JsonElement>(json);
+        Assert.Equal(JsonValueKind.Array, body.ValueKind);
+        Assert.Equal(5, body.GetArrayLength());
+        var first = body[0];
+        Assert.True(first.TryGetProperty("claimId", out _));
+        Assert.True(first.TryGetProperty("status", out _));
+        Assert.True(first.TryGetProperty("lastUpdated", out _));
+    }
+
+    [Fact]
     public async Task GetClaim_WithKnownSeedId_ReturnsOkWithClaimBody()
     {
         using var factory = new WebApplicationFactory<Program>();
