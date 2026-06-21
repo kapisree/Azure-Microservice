@@ -1,0 +1,50 @@
+name: Claims API CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-test-scan:
+    name: Build, test, dependency scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - run: dotnet restore ClaimsApi.sln
+      - run: dotnet build ClaimsApi.sln --configuration Release --no-restore
+      - run: dotnet test ClaimsApi.sln --configuration Release --no-build
+      - name: Vulnerable package scan
+        run: dotnet list ClaimsApi.sln package --vulnerable --include-transitive
+
+  provision-and-deploy:
+    name: Push image, provision infra, deploy
+    needs: build-test-scan
+    runs-on: ubuntu-latest
+    # github.ref == 'refs/heads/main' is a plan-level addition beyond
+    # ADR-003's literal "OIDC secrets present" condition — see the
+    # Files section note in docs/plans/2026-06-20-claims-status-api-plan.md.
+    if: ${{ github.ref == 'refs/heads/main' && secrets.AZURE_CLIENT_ID != '' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Provision infra (Bicep)
+        run: az deployment group create --resource-group claims-api-rg --template-file infra/bicep/main.bicep
+      - name: Build and push image
+        run: |
+          az acr build --registry "${{ vars.ACR_NAME }}" --image claims-api:${{ github.sha }} -f src/ClaimsApi/Dockerfile .
+      - name: Deploy to AKS
+        run: |
+          az aks get-credentials --resource-group claims-api-rg --name "${{ vars.AKS_NAME }}"
+          kubectl apply -f infra/k8s/
