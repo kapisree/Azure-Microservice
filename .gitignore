@@ -36,6 +36,12 @@ verification/*-js/
 verification/*-go/
 verification/*-py/
 
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
 # OS
 .DS_Store
 Thumbs.db
