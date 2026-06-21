@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: claims-api
-          image: claims-api:latest
+          image: claims-api:placeholder
           ports:
             - containerPort: 8080
           livenessProbe:

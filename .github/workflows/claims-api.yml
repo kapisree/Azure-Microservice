@@ -47,4 +47,5 @@ jobs:
       - name: Deploy to AKS
         run: |
           az aks get-credentials --resource-group claims-api-rg --name "${{ vars.AKS_NAME }}"
+          sed -i "s|claims-api:placeholder|${{ vars.ACR_NAME }}.azurecr.io/claims-api:${{ github.sha }}|" infra/k8s/deployment.yaml
           kubectl apply -f infra/k8s/
