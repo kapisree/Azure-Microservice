@@ -21,14 +21,30 @@ jobs:
       - name: Vulnerable package scan
         run: dotnet list ClaimsApi.sln package --vulnerable --include-transitive
 
+  check-secrets:
+    name: Check OIDC secrets present
+    runs-on: ubuntu-latest
+    outputs:
+      has-secret: ${{ steps.check.outputs.has-secret }}
+    steps:
+      - name: Check AZURE_CLIENT_ID is set
+        id: check
+        # The `secrets` context cannot be used directly in a job-level `if:`
+        # expression (GitHub Actions context-availability restriction); the
+        # documented workaround is to surface it as a step env var here, then
+        # gate the next job on this job's output instead.
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        run: echo "has-secret=${{ env.AZURE_CLIENT_ID != '' }}" >> "$GITHUB_OUTPUT"
+
   provision-and-deploy:
     name: Push image, provision infra, deploy
-    needs: build-test-scan
+    needs: [build-test-scan, check-secrets]
     runs-on: ubuntu-latest
     # github.ref == 'refs/heads/main' is a plan-level addition beyond
     # ADR-003's literal "OIDC secrets present" condition — see the
     # Files section note in docs/plans/2026-06-20-claims-status-api-plan.md.
-    if: ${{ github.ref == 'refs/heads/main' && secrets.AZURE_CLIENT_ID != '' }}
+    if: ${{ github.ref == 'refs/heads/main' && needs.check-secrets.outputs.has-secret == 'true' }}
     permissions:
       id-token: write
       contents: read
