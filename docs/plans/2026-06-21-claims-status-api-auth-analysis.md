@@ -1,7 +1,7 @@
 ---
 type: analysis
 phase: ANALYZE
-for_spec: 2026-06-21-claims-status-api-auth
+spec: 2026-06-21-claims-status-api-auth
 plan: 2026-06-21-claims-status-api-auth-plan
 created: "2026-06-21"
 ---
