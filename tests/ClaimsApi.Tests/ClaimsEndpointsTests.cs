@@ -10,8 +10,9 @@ public class ClaimsEndpointsTests
     [Fact]
     public async Task GetClaim_WithNonGuidId_ReturnsBadRequestProblemDetails()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new ClaimsApiTestFactory();
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", ClaimsApiTestFactory.TestApiKey);
 
         var response = await client.GetAsync("/claims/not-a-guid");
 
@@ -24,8 +25,9 @@ public class ClaimsEndpointsTests
     [Fact]
     public async Task GetClaim_WithUnknownId_ReturnsNotFoundProblemDetails()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new ClaimsApiTestFactory();
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", ClaimsApiTestFactory.TestApiKey);
 
         var response = await client.GetAsync($"/claims/{Guid.NewGuid()}");
 
@@ -38,8 +40,9 @@ public class ClaimsEndpointsTests
     [Fact]
     public async Task GetClaims_ReturnsOkWithAllFiveSeededClaims()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new ClaimsApiTestFactory();
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", ClaimsApiTestFactory.TestApiKey);
 
         var response = await client.GetAsync("/claims");
 
@@ -57,8 +60,9 @@ public class ClaimsEndpointsTests
     [Fact]
     public async Task GetClaim_WithKnownSeedId_ReturnsOkWithClaimBody()
     {
-        using var factory = new WebApplicationFactory<Program>();
+        using var factory = new ClaimsApiTestFactory();
         using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", ClaimsApiTestFactory.TestApiKey);
 
         var response = await client.GetAsync("/claims/3fa85f64-5717-4562-b3fc-2c963f66afa6");
 

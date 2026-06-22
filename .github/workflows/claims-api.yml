@@ -64,4 +64,27 @@ jobs:
         run: |
           az aks get-credentials --resource-group claims-api-rg --name "${{ vars.AKS_NAME }}"
           sed -i "s|claims-api:placeholder|${{ vars.ACR_NAME }}.azurecr.io/claims-api:${{ github.sha }}|" infra/k8s/deployment.yaml
-          kubectl apply -f infra/k8s/
+      - name: Check CLAIMS_API_KEY secret is set
+        env:
+          CLAIMS_API_KEY: ${{ secrets.CLAIMS_API_KEY }}
+        run: |
+          if [ -z "$CLAIMS_API_KEY" ]; then
+            echo "::error::CLAIMS_API_KEY repo secret is unset or empty; aborting deploy."
+            exit 1
+          fi
+      - name: Apply namespace
+        run: kubectl apply -f infra/k8s/namespace.yaml
+      - name: Create/update API key Secret
+        env:
+          CLAIMS_API_KEY: ${{ secrets.CLAIMS_API_KEY }}
+        run: |
+          tmpfile=$(mktemp)
+          printf '%s' "$CLAIMS_API_KEY" > "$tmpfile"
+          kubectl create secret generic claims-api-key \
+            --from-file=ApiKey__Value="$tmpfile" \
+            -n claims-api --dry-run=client -o yaml | kubectl apply -f -
+          rm -f "$tmpfile"
+      - name: Apply manifests
+        run: kubectl apply -f infra/k8s/namespace.yaml -f infra/k8s/deployment.yaml -f infra/k8s/service.yaml
+      - name: Restart rollout to pick up current key
+        run: kubectl rollout restart deployment/claims-api -n claims-api
