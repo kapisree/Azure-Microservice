@@ -20,7 +20,7 @@ public class ApiKeyFilter : IEndpointFilter
 
     public static bool Authorize(string? presented, string configured)
     {
-        if (presented is null)
+        if (string.IsNullOrEmpty(presented) || string.IsNullOrEmpty(configured))
         {
             return false;
         }

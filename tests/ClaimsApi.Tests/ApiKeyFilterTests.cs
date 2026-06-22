@@ -84,4 +84,26 @@ public class ApiKeyFilterTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public void Authorize_WithEmptyPresentedAndEmptyConfigured_MustNotAuthorize()
+    {
+        // SEC-006: CryptographicOperations.FixedTimeEquals treats two
+        // zero-length spans as equal, so an empty configured key (the
+        // appsettings.json production default) combined with a present
+        // but empty X-Api-Key header must not authorize the caller.
+        Assert.False(ApiKeyFilter.Authorize(string.Empty, string.Empty));
+    }
+
+    [Fact]
+    public async Task GetClaims_WithEmptyConfiguredKeyAndEmptyPresentedKey_ReturnsUnauthorized()
+    {
+        using var factory = new ClaimsApiTestFactory(apiKeyValue: string.Empty);
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Api-Key", string.Empty);
+
+        var response = await client.GetAsync("/claims");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }
