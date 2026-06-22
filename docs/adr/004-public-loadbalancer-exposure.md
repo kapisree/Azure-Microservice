@@ -2,7 +2,7 @@
 id: ADR-004
 status: accepted
 date: 2026-06-20
-amended: 2026-06-22
+amended: 2026-06-21
 addresses: [REQ-306, REQ-309]
 ---
 
@@ -73,7 +73,7 @@ honorable if SECURITY scores the exposure ≤ medium.
   this spec explicitly defers, expanding scope well beyond "demonstrate
   the pipeline on a small cloud-native service."
 
-## Amendment (2026-06-22): `tb-1` narrowed, not closed, by REQ-309
+## Amendment (2026-06-21): `tb-1` narrowed, not closed, by REQ-309
 
 `docs/specs/2026-06-21-claims-status-api-auth-design.md` (REQ-309..314)
 adds shared-secret API key authentication to `GET /claims` and

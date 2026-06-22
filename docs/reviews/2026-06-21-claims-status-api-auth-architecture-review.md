@@ -1,5 +1,5 @@
 ---
-date: 2026-06-22
+date: 2026-06-21
 target: docs/adr/004-public-loadbalancer-exposure.md (amendment), docs/adr/005-api-key-filter-kernel-module.md, docs/architecture/2026-06-21-claims-status-api-auth-overview.md, docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md (pre-PR, phase/arch)
 reviewers:
   - persona: azure-cloud-architect
@@ -56,7 +56,7 @@ flagged by more than one persona.
   base file alone.** **Fixed:** annotated `dfe-1`/`dfe-2`'s Information
   Disclosure entries directly in
   `docs/architecture/2026-06-20-claims-status-api-threat-model.md` with
-  a 2026-06-22 amendment note pointing at `dfe-6`.
+  a 2026-06-21 amendment note pointing at `dfe-6`.
 - **(Low) `api-key-secret`'s A:M rating presumes REQ-313(d)'s
   rollout-restart is implemented, which isn't true yet.** **Fixed:**
   asset entry now states this is architecture intent pending
@@ -84,7 +84,7 @@ flagged by more than one persona.
   are stated identically everywhere; `/health` and already-authorized
   traffic are both correctly described as unchanged. No findings on any
   of these.
-- Noted ADR-005's date (2026-06-22) is one day after the spec/overview
+- Noted ADR-005's date (2026-06-21) is one day after the spec/overview
   filenames (2026-06-21) — flagged as a sequencing nit, not an error
   (architecture work legitimately followed spec approval by a day).
   No change needed.

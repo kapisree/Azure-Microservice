@@ -1,9 +1,9 @@
 ---
 type: spec
 phase: SPEC
-status: draft
+status: accepted
 created: "2026-06-21"
-approved_by: ""
+approved_by: "kapisree (PR #8 merge)"
 supersedes: ""
 extends: "2026-06-20-claims-status-api-design"
 superseded_by: ""
@@ -59,6 +59,7 @@ The base spec's v1 explicitly deferred authentication (`Won't Have`), and ADR-00
 - **REQ-312:** The production API key is stored as a Kubernetes Secret (`claims-api-key`, namespace `claims-api`) and injected into the `Deployment`'s container as the environment variable `ApiKey__Value` via `secretKeyRef`. The Secret manifest is applied before the Deployment manifest in the deploy sequence.
 - **REQ-313:** The GitHub Actions workflow's existing OIDC-gated deploy job is extended to: (a) fail the job explicitly if the `CLAIMS_API_KEY` repo secret is empty or unset, before attempting anything else; (b) write the secret value to a temporary file (not a command-line argument) and create/update the Kubernetes Secret from that file (e.g. `kubectl create secret generic claims-api-key --from-file=ApiKey__Value=<tmpfile> -n claims-api --dry-run=client -o yaml | kubectl apply -f -`), avoiding exposure of the key value via process argv; (c) apply the Secret before `kubectl apply -f infra/k8s/`; (d) on every deploy run (not only when the key value changed), run `kubectl rollout restart deployment/claims-api -n claims-api` after applying the Deployment, so a rotated key actually takes effect on existing pods.
 - **REQ-314:** `appsettings.Development.json` carries a placeholder, non-production `ApiKey:Value` for local `dotnet run`. The xUnit test suite (`tests/ClaimsApi.Tests/`) configures its own key value via `WebApplicationFactory`'s configuration override, independent of any real secret.
+- **REQ-313(e):** The deploy job applies the `claims-api` namespace manifest (idempotently — `kubectl apply`, safe to re-run) before the Secret-create step in REQ-313(b)/(c), on every deploy run, not only the first. This corrects an architecture-phase finding (`docs/architecture/2026-06-21-claims-status-api-auth-overview.md`'s cicd component, surfaced by the ARCHITECTURE-phase verifier): the Assumptions section below states the namespace "already exists," but nothing in the CI workflow guaranteed that on a fresh cluster, and REQ-313(a)'s fail-fast guard (which only checks `CLAIMS_API_KEY` is set) would not catch a missing-namespace failure. This is the same namespace the base spec's REQ-305 already creates as part of the Deployment manifest; this requirement makes the apply-it-first ordering an explicit CI step rather than an implicit assumption.
 
 > REQ-309 is the only requirement in this spec tagged `[verifiable-model]` — it is the one piece of authentication logic this feature adds, per `art-formal-verification`'s tagging guidance. REQ-310/311/312/313/314 are infrastructure, response-shape, and configuration concerns covered by tests/manifest review, not Dafny.
 
@@ -98,7 +99,7 @@ Per `art-formal-verification`, REQ-309 is tagged `[verifiable-model]`: a Dafny p
 ## Assumptions
 - A human with repository admin access will provision the `CLAIMS_API_KEY` GitHub Actions secret out-of-band before the first deploy that includes this feature — this spec only consumes that secret, consistent with how the base spec treats the Azure OIDC secrets.
 - Callers of `GET /claims`/`GET /claims/{claimId}` receive their API key value through some out-of-band channel (e.g. a secrets manager, a deployment runbook) — this spec does not define key distribution to callers, only validation.
-- The `claims-api` Kubernetes namespace already exists (per the base spec's REQ-305) before this feature's Secret is applied.
+- ~~The `claims-api` Kubernetes namespace already exists (per the base spec's REQ-305) before this feature's Secret is applied.~~ Superseded by REQ-313(e): the deploy job now applies the namespace manifest itself, idempotently, on every run — this is no longer an external assumption.
 
 ## Risks
 - **Risk:** An API key sent over plaintext HTTP can be captured by anyone positioned to observe the traffic, granting durable access until manual rotation. **Severity:** Medium (level with SEC-001's existing disposition in `docs/security/0.1.0-disposition.md`, not an escalation above it — SEC-001 is already recorded as Medium/accepted, and ADR-004's Context notes the fresh-eyes review rated the underlying exposure High; this risk introduces a stealable credential where none existed before, which is why it stays at the same severity rather than dropping). **Mitigation:** This spec states the limitation explicitly rather than letting the feature read as "the exposure is now fixed"; ARCHITECTURE phase must amend ADR-004 accordingly; TLS remains a prerequisite for any future reuse of this pattern with real data, exactly as the base spec already states.

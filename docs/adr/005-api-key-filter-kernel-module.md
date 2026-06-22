@@ -1,7 +1,7 @@
 ---
 id: ADR-005
 status: accepted
-date: 2026-06-22
+date: 2026-06-21
 addresses: [REQ-309, REQ-310, REQ-311]
 ---
 

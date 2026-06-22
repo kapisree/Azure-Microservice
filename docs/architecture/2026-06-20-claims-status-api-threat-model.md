@@ -85,7 +85,7 @@ stride_per_element:
     status) with no rate limit. Mitigation: **none today** — this is the
     accepted risk under ADR-004, bounded only by the synthetic-data
     promise. Not mitigated in code.
-    **Amended 2026-06-22:** superseded for callers without a valid API
+    **Amended 2026-06-21:** superseded for callers without a valid API
     key — see `dfe-6` in
     `docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md`;
     a key-holding caller (including one who captured the key in
@@ -103,7 +103,7 @@ stride_per_element:
     named in the spec's Risks section and the fresh-eyes review's
     convergent finding #1; accepted under ADR-004 for v1, conditional on
     synthetic-data-only continuing to hold.
-    **Amended 2026-06-22:** superseded for callers without a valid API
+    **Amended 2026-06-21:** superseded for callers without a valid API
     key — see `dfe-6` in
     `docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md`;
     a key-holding caller (including one who captured the key in

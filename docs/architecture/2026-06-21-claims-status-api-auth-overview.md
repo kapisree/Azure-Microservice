@@ -2,6 +2,7 @@
 spec: 2026-06-21-claims-status-api-auth
 kernel_modules:
   - path: src/ClaimsApi/ApiKeyFilter.cs
+    scope: "Authorize(string?, string) -> bool predicate only — not the IEndpointFilter class as a whole. The filter's header-parsing/FixedTimeEquals-call/Results.Problem-construction logic that co-resides in this file is the non-kernel shell (ADR-005) and is outside this req_map."
     req_map: [REQ-309]
 external_dependencies:
   - name: ApiKeySettings.Value (IConfiguration, sourced from K8s Secret env var ApiKey__Value)

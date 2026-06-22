@@ -3,6 +3,10 @@ spec: 2026-06-21-claims-status-api-auth
 assets:
   - name: api-key-secret
     cia: {c: H, i: H, a: M}
+trust_boundaries:
+  - name: tb-1
+    between: [public-internet, claims-api-service]
+    note: "inherited from docs/architecture/2026-06-20-claims-status-api-threat-model.md, narrowed (not closed) by this feature's dfe-6 gate — see this doc's 'Trust boundary tb-1' section and ADR-004's amendment"
 dataflow_elements:
   - id: dfe-6
     name: api-key-validation
