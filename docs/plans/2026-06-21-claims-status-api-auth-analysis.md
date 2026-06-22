@@ -12,10 +12,11 @@ created: "2026-06-21"
 
 - `bash scripts/analyze-adr-plan-linkage.sh` → **PASS** (2 plans verified,
   1 skipped — this report itself, correctly: it carries no `spec:`
-  frontmatter key, since it is an analysis transcript rather than a
-  plan with a source spec to cover, so the script's no-silent-skip
-  reporting names it explicitly rather than passing it through the
-  ADR-coverage check). The plan's `decisions: [ADR-004, ADR-005]` covers
+  frontmatter key (its source spec is recorded under `for_spec:`
+  instead), since an ANALYZE transcript is not a plan responsible for
+  that spec's ADR coverage, so the script's no-silent-skip reporting
+  names it explicitly rather than passing it through the ADR-coverage
+  check). The plan's `decisions: [ADR-004, ADR-005]` covers
   REQ-309, the only `[verifiable-model]` REQ in this spec — ADR-005
   explicitly addresses `[REQ-309, REQ-310, REQ-311]`, ADR-004's
   amendment adds REQ-309 to its `addresses` list.
