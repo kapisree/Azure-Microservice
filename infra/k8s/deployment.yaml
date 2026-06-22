@@ -18,6 +18,12 @@ spec:
           image: claims-api:placeholder
           ports:
             - containerPort: 8080
+          env:
+            - name: ApiKey__Value
+              valueFrom:
+                secretKeyRef:
+                  name: claims-api-key
+                  key: ApiKey__Value
           livenessProbe:
             httpGet:
               path: /health
