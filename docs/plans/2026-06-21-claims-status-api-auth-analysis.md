@@ -1,7 +1,7 @@
 ---
 type: analysis
 phase: ANALYZE
-spec: 2026-06-21-claims-status-api-auth
+for_spec: 2026-06-21-claims-status-api-auth
 plan: 2026-06-21-claims-status-api-auth-plan
 created: "2026-06-21"
 ---
@@ -11,7 +11,11 @@ created: "2026-06-21"
 ## Mechanical gates
 
 - `bash scripts/analyze-adr-plan-linkage.sh` → **PASS** (2 plans verified,
-  0 skipped). The new plan's `decisions: [ADR-004, ADR-005]` covers
+  1 skipped — this report itself, correctly: it carries no `spec:`
+  frontmatter key, since it is an analysis transcript rather than a
+  plan with a source spec to cover, so the script's no-silent-skip
+  reporting names it explicitly rather than passing it through the
+  ADR-coverage check). The plan's `decisions: [ADR-004, ADR-005]` covers
   REQ-309, the only `[verifiable-model]` REQ in this spec — ADR-005
   explicitly addresses `[REQ-309, REQ-310, REQ-311]`, ADR-004's
   amendment adds REQ-309 to its `addresses` list.
