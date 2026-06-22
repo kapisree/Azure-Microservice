@@ -27,7 +27,7 @@ All code, specs, plans, proofs, ADRs, threat models, and release artifacts live 
 | ARCHITECTURE | `phase/arch` | `/architecture` | ADR(s), `docs/architecture/<spec-slug>-overview.md`, `docs/architecture/<spec-slug>-threat-model.md` |
 | PLAN | `phase/plan` | `/speckit.plan` + `/superpowers:writing-plans` | `docs/plans/<plan>.md` (PLAN consumes ADRs; does not re-derive architecture) |
 | TASKS | `phase/plan` | `/speckit.tasks` | task list inside the plan |
-| ANALYZE | `phase/plan` | `/speckit.analyze` + verifier skill | analysis report + ADR→PLAN linkage check |
+| ANALYZE | `phase/plan` | `/speckit.analyze` + verifier skill | analysis report (`docs/plans/<plan>-analysis.md`, frontmatter `for_spec:` not `spec:` — `scripts/analyze-adr-plan-linkage.sh` globs `docs/plans/*.md` and treats any file with a `spec:` key as a plan needing ADR coverage; an analysis transcript isn't one, so it must skip that key to land in the script's `SKIP (no spec: frontmatter — outside the gate)` path rather than fail it) + ADR→PLAN linkage check |
 | IMPLEMENT | `impl/plan-N-<name>` | `/superpowers:subagent-driven-development`, TDD, Dafny | code + tests + proofs |
 | VALIDATE | `phase/validate` | `scripts/run-quality-gates.sh` + verifier | green gate pass |
 | SECURITY | `phase/security` | `/security-review` | `docs/security/<version>-review.md`, `docs/security/<version>-disposition.md` |
