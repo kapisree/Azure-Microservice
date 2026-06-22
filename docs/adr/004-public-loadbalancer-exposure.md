@@ -2,7 +2,8 @@
 id: ADR-004
 status: accepted
 date: 2026-06-20
-addresses: [REQ-306]
+amended: 2026-06-21
+addresses: [REQ-306, REQ-309]
 ---
 
 # ADR-004: Accept public, unauthenticated `LoadBalancer` exposure as a named trust boundary for v1
@@ -71,3 +72,39 @@ honorable if SECURITY scores the exposure ≤ medium.
   spec's Won't Have; would also require an identity provider decision
   this spec explicitly defers, expanding scope well beyond "demonstrate
   the pipeline on a small cloud-native service."
+
+## Amendment (2026-06-21): `tb-1` narrowed, not closed, by REQ-309
+
+`docs/specs/2026-06-21-claims-status-api-auth-design.md` (REQ-309..314)
+adds shared-secret API key authentication to `GET /claims` and
+`GET /claims/{claimId}`, discharging this ADR's Open Question (the spec's
+own Open Questions #1 directed this amendment rather than a new ADR).
+This amendment records the effect on `tb-1`, it does not re-decide it:
+
+- **`tb-1` is narrowed, not eliminated.** Reading `dfe-1`/`dfe-2` now
+  requires possessing the shared API key (`dfe-6` in
+  `docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md`).
+  An attacker without the key can no longer read claim data through
+  these endpoints.
+- **`tb-1` is not closed.** The key travels over the same plaintext
+  `LoadBalancer:80` path this ADR already accepted has no TLS. A
+  network-position attacker who captures the key in transit regains the
+  same read access this ADR originally accepted as open — the boundary
+  has a narrower *door*, not a *lock immune to the original threat
+  model's plaintext-channel assumption*. `GET /health` (`dfe-3`) remains
+  fully open by design (REQ-310; probes cannot send custom headers).
+- **This narrowing does not change this ADR's "accept for v1" stance**,
+  which remains conditioned on synthetic-data-only and is still
+  overridable by SECURITY's CVSS scoring (per this ADR's original
+  "provisional, not a settled disposition" paragraph, restated here:
+  if a second reviewer scores the residual `tb-1` exposure — now
+  including the plaintext-key-capture risk the auth spec's Risks
+  section names — critical or high, that scoring binds and the
+  back-edge protocol triggers regardless of this ADR's stance).
+- **SEC-001** (`docs/security/0.1.0-disposition.md`), the disposition
+  entry that accepted the pre-auth `tb-1` exposure, no longer accurately
+  describes the boundary after this amendment. The auth spec's Open
+  Questions #4 already flags the obligation to reconcile SEC-001 when
+  this feature reaches its own SECURITY/RELEASE phase; this amendment
+  is the architectural record that the reconciliation is needed, not
+  the reconciliation itself.
