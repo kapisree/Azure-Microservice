@@ -7,7 +7,7 @@ approved_by: "kapisree (PR #1 merge)"
 supersedes: ""
 extends: ""
 superseded_by: ""
-extended_by: ""
+extended_by: "2026-06-21-claims-status-api-auth-design"
 ---
 
 # Claims Status API Specification
