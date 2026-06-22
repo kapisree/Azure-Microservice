@@ -85,6 +85,11 @@ stride_per_element:
     status) with no rate limit. Mitigation: **none today** — this is the
     accepted risk under ADR-004, bounded only by the synthetic-data
     promise. Not mitigated in code.
+    **Amended 2026-06-22:** superseded for callers without a valid API
+    key — see `dfe-6` in
+    `docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md`;
+    a key-holding caller (including one who captured the key in
+    transit) still has this exposure unchanged.
   - **D (Denial of Service):** with no rate limiting (Won't Have),
     nothing stops repeated or scripted lookups against this endpoint
     from generating sustained load. Mitigation: none in this version —
@@ -98,6 +103,11 @@ stride_per_element:
     named in the spec's Risks section and the fresh-eyes review's
     convergent finding #1; accepted under ADR-004 for v1, conditional on
     synthetic-data-only continuing to hold.
+    **Amended 2026-06-22:** superseded for callers without a valid API
+    key — see `dfe-6` in
+    `docs/architecture/2026-06-21-claims-status-api-auth-threat-model.md`;
+    a key-holding caller (including one who captured the key in
+    transit) still has this exposure unchanged.
   - **D (Denial of Service):** same rationale as `dfe-1` — a full-dataset
     response is also the most expensive single request this API can
     serve, making it the cheapest target for load generation. Mitigation:
