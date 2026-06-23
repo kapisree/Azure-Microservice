@@ -13,6 +13,17 @@ Before proceeding from one phase to the next:
    comment exists; CI itself runs only the mechanical gates (quality gates,
    Dafny, governance tests). The check attests only that findings were posted
    — it does not parse the verdict.
+   - **Code-only PRs on `impl/sec-*` or `patch/*` branches** (no markdown
+     changed): the verifier reviews `*.md` diffs only, so there is nothing
+     for it to read. `scripts/run-verifier.sh` posts a distinct
+     `specflow-verifier:none-applicable` attestation for these two branch
+     shapes specifically (added 2026-06-23, retro
+     `2026-06-22-sec-006-process-gap` proposal #3) — they were already
+     reviewed once, either as the SECURITY finding the back-edge fixes or
+     as the human review the patch tier requires. This satisfies the CI
+     check; it does **not** substitute for step 5's human review. Plain
+     `impl/*` IMPLEMENT branches are NOT covered by this fallback — that
+     gap is still open (see the retro's Open Question #1).
 4. If critical or high findings exist (verdict REQUEST_CHANGES), address them
    and re-run the verifier. Enforcing the verdict is the human reviewer's job
    (step 5), not CI's.

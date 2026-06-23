@@ -184,6 +184,32 @@ No prior retrospective exists (`docs/retrospectives/` contained only
 will carry this retrospective's own proposals forward for the *next*
 retrospective to decide, per the mandatory closing-the-loop rule.
 
+### Decisions on this retrospective's own proposals (added 2026-06-23, follow-up PR)
+
+- **Proposal 1** (`superseded` status) — accepted (landed:
+  `constitution.md`'s `art-threat-driven-security`,
+  `docs/security/RUBRIC.md`).
+- **Proposal 2** (carried-forward-finding ID pattern doc) — accepted
+  (landed: `docs/security/RUBRIC.md`'s new "Carrying findings forward
+  without re-minting IDs" section).
+- **Proposal 3** (verifier fallback for code-only PRs) — accepted, but
+  narrower than either option (a) or (b) as originally framed (landed:
+  `scripts/run-verifier.sh`, `.claude/rules/review-gate.md`). Scoped to
+  `impl/sec-*` and `patch/*` branches only, per Open Question #1's lean
+  toward the narrower variant — both shapes had already received one
+  round of human/SECURITY review before the branch existed. Plain
+  `impl/*` IMPLEMENT branches are explicitly **not** covered; that part
+  of Open Question #1 (and PR #4's precedent) remains open for a future
+  retrospective.
+- **Proposal 4** (empty/default-value test case requirement) — accepted,
+  generalized per Open Question #2 rather than scoped to auth predicates
+  only (landed: `constitution.md`'s `art-test-first`). No PLAN-specific
+  template file exists in this repo to amend (speckit's `/speckit.plan`
+  is external); the constitutional amendment is the binding guidance
+  until one exists.
+- **Proposal 5** (Dafny model must check the production default) —
+  accepted (landed: `constitution.md`'s `art-formal-verification`).
+
 ## Open Questions
 
 1. Should proposal 3's fallback (a minimal "not applicable" attestation

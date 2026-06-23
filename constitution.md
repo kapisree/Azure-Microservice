@@ -66,7 +66,7 @@ status: active
 No production code is written before a failing test exists.
 
 **Why:** tests written after code tend to confirm what the code does rather than what it should do.
-**How to apply:** every PR that adds `src/` code must add a test in `tests/` in the same commit or earlier in the branch.
+**How to apply:** every PR that adds `src/` code must add a test in `tests/` in the same commit or earlier in the branch. **(amended 2026-06-23 per retro `2026-06-22-sec-006-process-gap` proposal #4):** for a `[verifiable]`/`[verifiable-model]` task whose kernel module gates behavior on a configuration-supplied value (a credential, threshold, or flag), the test list must include a case for that value's zero/default/empty/unset state — not only its missing/null state. Coverage that maps a REQ to tasks without checking whether those tasks' tests exercise the value's default is not sufficient.
 
 ---
 
@@ -87,7 +87,7 @@ Two verification tags exist (amended 2026-06-09 per retro proposal #7):
 Runtime-contract extraction for `[verifiable]` is deferred to v3.2 (v3.1 spec Open Question #1a). Until it lands, tag requirements `[verifiable-model]` — the tag is honest about scope: the proof governs the model, tests govern the code.
 
 **Why:** TDD proves cases pass; Dafny proves the contract is sound for all inputs.
-**How to apply:** during IMPLEMENT, every `[verifiable]` or `[verifiable-model]` REQ adds a `.dfy` file; `[verifiable]` additionally adds a contract extraction step (v3.2+).
+**How to apply:** during IMPLEMENT, every `[verifiable]` or `[verifiable-model]` REQ adds a `.dfy` file; `[verifiable]` additionally adds a contract extraction step (v3.2+). **(amended 2026-06-23 per retro `2026-06-22-sec-006-process-gap` proposal #5):** when the production code reads a configuration default for a value the proof's predicate compares against (e.g. a credential, threshold, or flag), the Dafny model must include that default as a named case — typically a lemma stating the predicate's result when the input equals the default — from the model's first version, not added retroactively after a gap is found downstream. A proof that is merely internally consistent with a buggy default is not sufficient; it must be checked against the default the running system will actually use.
 
 ---
 
@@ -135,6 +135,7 @@ Severity is assigned during PR review by someone other than the finding's author
 - **Critical and high findings must reach `status: fixed`. They cannot be `accepted` or `deferred`** — RELEASE blocks if a critical or high carries those statuses regardless of expiry.
 - **Mediums** with `status: accepted` or `status: deferred` are capped at 5 per release (override in `docs/security/RUBRIC.md`'s `medium_cap:` field).
 - **Lows** do not count toward the cap and do not require an `expiry:`.
+- **(amended 2026-06-23 per retro `2026-06-22-sec-006-process-gap` proposal #1):** a finding whose original wording no longer accurately describes the system, because a later finding closes the gap it described under a new ID, takes `status: superseded` and records `superseded_by: <new-id>`. A `superseded` finding carries no `expiry:` and does not count toward the medium cap or any other gate — it documents traceability, it is not an open risk.
 
 If SECURITY surfaces a critical or high finding requiring code change, spawn `impl/sec-<finding-id>` from main, fix with TDD, merge, re-run VALIDATE, then resume `phase/security` with `status: fixed`. SECURITY artifacts are versioned per re-entry.
 

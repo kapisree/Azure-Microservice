@@ -22,6 +22,24 @@ Rules (see `art-threat-driven-security` for the full text):
 - Lows need no expiry and don't count toward the cap.
 - No CWE→CVSS auto-mapping: CWE is structural, CVSS is contextual.
 - Solo teams: author scores provisionally; the next available second reviewer confirms or downgrades, recorded in the disposition's `rationale:`.
+- `status: superseded` (added 2026-06-23, retro `2026-06-22-sec-006-process-gap` proposal #1): use when a later finding, under a new ID, re-describes and closes the gap an older finding named. The superseded finding records `superseded_by: <new-id>`, carries no `expiry:`, and is excluded from the medium cap — it is traceability, not an open risk. Example: `docs/security/0.2.0-disposition.md`'s SEC-001 entry, superseded by SEC-007 once authentication closed the unauthenticated-access gap SEC-001 originally described.
+
+## Carrying findings forward without re-minting IDs
+
+`scripts/check-traceability.sh` enforces that each `SEC-NNN` token appears
+in exactly one `docs/security/*-review.md` file. A new `<version>-review.md`
+that restates a carried-forward finding's full text under its original ID
+will fail that check. Instead:
+
+- Keep the finding's full `id:`/severity/text in the review document that
+  originated it; never repeat the literal `SEC-NNN` token in a later
+  `<version>-review.md`.
+- In the new review document, describe carried-forward findings by topic
+  or affected file only (e.g. "the mutable Docker tag finding, unchanged"),
+  with a prose pointer to the originating review file.
+- The new `<version>-disposition.md` document — which `check-traceability.sh`
+  does not scan — is where the literal ID, current status, owner, and
+  expiry are restated for gate accounting.
 
 ## Worked example
 
