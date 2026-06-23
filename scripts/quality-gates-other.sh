@@ -6,6 +6,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+if [[ -d tests/infra ]] && find tests/infra -type f -name 'test_*.sh' | grep -q .; then
+  echo "--- infra checks ---"
+  for t in tests/infra/test_*.sh; do
+    bash "$t"
+  done
+fi
+
 if ! find . -maxdepth 3 -name '*.csproj' -not -path './bin/*' -not -path './obj/*' | grep -q .; then
   echo "SKIP dotnet gates (no .csproj found yet)"
   exit 0
