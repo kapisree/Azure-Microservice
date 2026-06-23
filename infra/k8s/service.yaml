@@ -4,7 +4,7 @@ metadata:
   name: claims-api
   namespace: claims-api
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: claims-api
   ports:
