@@ -6,6 +6,7 @@ proposes_changes_to:
   - constitution.md
   - docs/security/RUBRIC.md
   - scripts/run-verifier.sh
+  - .github/workflows/verifier.yml  # only if Proposed Changes option (a) is accepted
   - .claude/rules/review-gate.md
 illustrative_artifacts:
   - docs/plans/2026-06-21-claims-status-api-auth-plan.md
@@ -76,9 +77,10 @@ section below).
      auth predicate's behavior on empty input" until SECURITY.
 2. **The verifier's documented scope (markdown-only diffs) has no
    process answer for code-only PRs, and this has now happened twice.**
-   `scripts/run-verifier.sh` diffs `*.md` files only; a pure code+test+
-   proof PR (PR #4 in the base-spec cycle, PR #13 for SEC-006 here) finds
-   nothing to review, posts nothing, and the "Verifier findings posted"
+   `scripts/run-verifier.sh` diffs `*.md` files only; a pure code+test PR
+   (optionally +proof — PR #4's shell-only line-ending fix in the
+   base-spec cycle had no proof, PR #13's SEC-006 fix did) finds nothing
+   to review, posts nothing, and the "Verifier findings posted"
    CI check stays permanently red. Both times the resolution was "merge
    anyway, the check's failure here is a false negative" — a judgment
    call made ad hoc by a human each time, with no written rule backing
