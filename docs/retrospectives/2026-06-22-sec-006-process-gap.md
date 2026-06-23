@@ -180,19 +180,63 @@ section below).
 ## Decisions on Prior Proposals
 
 No prior retrospective exists (`docs/retrospectives/` contained only
-`README.md` before this document). Nothing to walk forward. This section
-will carry this retrospective's own proposals forward for the *next*
-retrospective to decide, per the mandatory closing-the-loop rule.
+`README.md` before this document). Nothing to walk forward.
+
+This retrospective's own proposals were decided in a follow-up PR (#19)
+rather than deferred to the next retrospective — see the subsection below
+and Open Question #3's resolution. Any proposal *not* recorded with a
+decision there still carries forward for the next retrospective, per the
+mandatory closing-the-loop rule.
+
+### Decisions on this retrospective's own proposals (added 2026-06-23, PR #19)
+
+- **Proposal 1** (`superseded` status) — accepted, with a guard added
+  during PR #19's verifier review (landed: `constitution.md`'s
+  `art-threat-driven-security`, `docs/security/RUBRIC.md`). The verifier
+  flagged the original proposal as an unguarded escape hatch from the
+  must-fix rule for criticals/highs — `superseded` now requires either
+  the `superseded_by:` finding to be `status: fixed`, or a second
+  reviewer's independent confirmation of the residual's lower severity,
+  before it can apply to a critical/high original.
+- **Proposal 2** (carried-forward-finding ID pattern doc) — accepted
+  (landed: `docs/security/RUBRIC.md`'s new "Carrying findings forward
+  without re-minting IDs" section). No `.github/workflows/verifier.yml`
+  change was needed: its existing `specflow-verifier:` grep already
+  matches the new `none-applicable` marker introduced by proposal 3, so
+  the conditional entry in this document's frontmatter resolved without
+  an edit.
+- **Proposal 3** (verifier fallback for code-only PRs) — accepted, but
+  narrower than landed in PR #19's first revision. The verifier's PR #19
+  review found the `patch/*` half of the scoping incoherent: a
+  conformant patch-tier PR always carries a spec delta (markdown), so a
+  markdown-free `patch/*` PR is out of patch-tier conformance, not a
+  pre-reviewed shape, and the "already reviewed once" rationale doesn't
+  hold for it. `patch/*` was dropped; the fallback now covers only
+  `impl/sec-*` back-edge branches (landed: `scripts/run-verifier.sh`,
+  `.claude/rules/review-gate.md`). Plain `impl/*` IMPLEMENT branches and
+  `patch/*` branches remain uncovered — Open Question #1 stays open for
+  a future retrospective.
+- **Proposal 4** (empty/default-value test case requirement) — accepted,
+  generalized per Open Question #2 rather than scoped to auth predicates
+  only (landed: `constitution.md`'s `art-test-first`). No PLAN-specific
+  template file exists in this repo to amend (speckit's `/speckit.plan`
+  is external); the constitutional amendment is the binding guidance
+  until one exists.
+- **Proposal 5** (Dafny model must check the production default) —
+  accepted (landed: `constitution.md`'s `art-formal-verification`).
 
 ## Open Questions
 
-1. Should proposal 3's fallback (a minimal "not applicable" attestation
-   comment for code-only PRs) be scoped narrowly to `impl/sec-*`
-   back-edge branches, or to any PR with zero markdown changes
-   (including ordinary `impl/*` IMPLEMENT-phase PRs)? The base-spec
-   cycle's PR #4 (`patch/sh-line-endings`) suggests the latter, but that
-   widens what "verified" means for ordinary IMPLEMENT work too — worth a
-   second opinion before landing.
+1. **Partially resolved (PR #19):** proposal 3's fallback landed scoped
+   to `impl/sec-*` back-edge branches only — `patch/*` was dropped during
+   review (a markdown-free `patch/*` PR is out of patch-tier conformance,
+   not a pre-reviewed shape). Still open: should the fallback (or a
+   different mechanism) ever extend to ordinary `impl/*` IMPLEMENT-phase
+   PRs, or to a `patch/*` PR that genuinely has no spec-delta-shaped
+   change to make? The base-spec cycle's PR #4 (`patch/sh-line-endings`,
+   a shell-only fix) is exactly the still-open case — it predates the
+   patch-tier rule's current wording and was merged via ad hoc human
+   judgment, the same gap this proposal set out to close.
 2. Proposal 4 (empty/default-credential test case in PLAN guidance) is
    specific to authorization predicates. Is there a more general
    principle here — e.g., "every `[verifiable*]` task list must include a
@@ -200,10 +244,13 @@ retrospective to decide, per the mandatory closing-the-loop rule.
    null/missing" — that should be the actual constitutional amendment
    instead of a narrower auth-specific rule? Left open for whoever
    accepts proposal 4 to decide the generalization's scope.
-3. This retrospective's own proposed amendments to `constitution.md`
-   (proposal 1) and `art-formal-verification` (proposal 5) are themselves
-   proposals, not edits — per this skill's contract, they require a
-   follow-up PR to actually amend the constitution if accepted. Who signs
-   off on constitutional amendments in a solo-team context, and is that
-   sign-off itself a `/retrospective`-cadence decision or a standing
-   human-reviewer call independent of this cadence?
+3. **Resolved (PR #19):** who signs off on constitutional amendments in a
+   solo-team context? Decision: the human reviewer who approves the
+   follow-up application PR (here, PR #19) under `art-review-gate` step 5
+   *is* the sign-off — no separate `/retrospective`-cadence ratification
+   step exists or is needed. This is consistent with how every other
+   constitutional amendment in this repo's history has landed (e.g. the
+   `art-formal-verification` tag split, "amended 2026-06-09 per retro
+   proposal #7") and with `art-retrospective-cadence`'s own text ("Apply
+   changes in a follow-up PR if accepted") — "if accepted" is satisfied
+   by that PR's human approval, not by a separate vote.
