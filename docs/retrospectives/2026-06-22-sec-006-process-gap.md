@@ -7,6 +7,7 @@ proposes_changes_to:
   - docs/security/RUBRIC.md
   - scripts/run-verifier.sh
   - .claude/rules/review-gate.md
+illustrative_artifacts:
   - docs/plans/2026-06-21-claims-status-api-auth-plan.md
 ---
 
@@ -135,11 +136,18 @@ section below).
    `verifier-attestation` CI job in `.github/workflows/verifier.yml` can
    detect it and pass instead of permanently failing, or (b) extend the
    verifier's scope to review code diffs too when no markdown changed,
-   per the skill's own "adversarial reviewer" charter. Recommend (a): it
-   requires a small script change, not a change to what the verifier
-   skill is responsible for reviewing, and it replaces two ad hoc
-   human "merge anyway" judgment calls (PR #4, PR #13) with a
-   mechanically checkable rule.
+   per the skill's own "adversarial reviewer" charter. Caution on (a): the
+   existing `verifier-attestation` CI grep (`grep -q 'specflow-verifier:'`,
+   `.github/workflows/verifier.yml`) would match a `none-applicable`
+   marker exactly as it matches real findings — so (a), if adopted as
+   written, mechanically greenlights any zero-markdown PR, including
+   `impl/*` IMPLEMENT-phase work, with zero adversarial review of the
+   code/test/proof diff. Given SEC-006 was itself a code-only fix, this
+   tradeoff should be weighed against `art-review-gate` before either
+   option is adopted — see Open Question 1. A narrower version of (a),
+   scoped only to `impl/sec-*` back-edge branches (which were reviewed
+   once already, in the SECURITY phase that raised the finding), is
+   likely safer than applying it to all code-only PRs.
 4. **Add an explicit empty/default-credential test case to the PLAN
    template's task-authoring guidance** (or to `art-test-first`'s
    "How to apply" note) for any `[verifiable]`/`[verifiable-model]` task
@@ -150,9 +158,10 @@ section below).
    have caught SEC-006 before IMPLEMENT rather than during SECURITY.
    Target: whichever template or skill governs PLAN's task-authoring
    guidance (no per-spec template currently exists in this repo;
-   `docs/plans/2026-06-21-claims-status-api-auth-plan.md` is listed in
-   `proposes_changes_to` as the nearest concrete artifact illustrating
-   the gap, not as a file to literally edit retroactively).
+   `docs/plans/2026-06-21-claims-status-api-auth-plan.md` is listed under
+   `illustrative_artifacts` in the frontmatter as the nearest concrete
+   example of the gap — it is not a target this proposal edits
+   retroactively).
 5. **Require a Dafny model's empty/default-input behavior to be checked
    against the production default it will be compared to, as part of
    `art-formal-verification`'s "How to apply" note.** The
