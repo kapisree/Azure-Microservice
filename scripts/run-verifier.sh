@@ -52,18 +52,22 @@ CHANGED="$(git diff --name-only "origin/${BASE_BRANCH}...HEAD" -- '*.md' | grep 
 if [[ -z "$CHANGED" ]]; then
   echo "No markdown documents changed vs origin/${BASE_BRANCH} — nothing to verify."
   # Retro 2026-06-22-sec-006-process-gap, proposal #3 (option a, narrowly
-  # scoped): impl/sec-* back-edge branches and patch/* branches were
-  # already reviewed once (the SECURITY finding, or the patch-tier human
-  # review) before this branch existed, and their PR diffs are small by
-  # construction. For those branch shapes only, post a clearly-labeled
-  # "not applicable" attestation so the CI check doesn't stay permanently
-  # red for a PR shape the verifier was never going to have anything to
-  # review on. This does NOT substitute for human review (review-gate.md
-  # step 5 still applies) and does NOT extend to plain impl/* IMPLEMENT
-  # branches, where the markdown-only scope gap remains open (see the
-  # retro's Open Question #1).
+  # scoped to impl/sec-* only — patch/* was dropped during PR #19 review:
+  # a conformant patch-tier PR always includes a spec delta, which is a
+  # markdown change, so a patch/* PR with zero markdown changed is out of
+  # patch-tier conformance, not a branch shape that was "already reviewed
+  # once" by construction). impl/sec-* back-edge branches exist only
+  # because a SECURITY-phase review already found and scored the finding
+  # they fix, so their PR diffs are small and already reviewed once
+  # before the branch existed. For that branch shape only, post a
+  # clearly-labeled "not applicable" attestation so the CI check doesn't
+  # stay permanently red for a PR shape the verifier was never going to
+  # have anything to review on. This does NOT substitute for human review
+  # (review-gate.md step 5 still applies) and does NOT extend to plain
+  # impl/* IMPLEMENT branches or patch/* branches, where the markdown-only
+  # scope gap remains open (see the retro's Open Question #1).
   CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-  if [[ -n "$PR" && "$POST" -eq 1 && "$CURRENT_BRANCH" =~ ^(impl/sec-|patch/) ]]; then
+  if [[ -n "$PR" && "$POST" -eq 1 && "$CURRENT_BRANCH" =~ ^impl/sec- ]]; then
     if command -v gh >/dev/null 2>&1; then
       NOTE="$(mktemp)"
       trap 'rm -f "$NOTE"' EXIT
@@ -71,10 +75,10 @@ if [[ -z "$CHANGED" ]]; then
         echo "<!-- specflow-verifier:none-applicable sha:${HEAD_SHA} -->"
         echo "## SpecFlow verifier — not applicable — \`${HEAD_SHA}\`"
         echo
-        echo "No markdown documents changed on \`${CURRENT_BRANCH}\` vs origin/${BASE_BRANCH} — nothing for the verifier to review (it reviews \`*.md\` diffs only). This branch shape (\`impl/sec-*\` back-edge or \`patch/*\`) was already reviewed once before this branch existed. Human review (\`.claude/rules/review-gate.md\` step 5) is still required before merge — this comment only satisfies the mechanical CI attestation, it does not assert the code/test/proof diff was reviewed."
+        echo "No markdown documents changed on \`${CURRENT_BRANCH}\` vs origin/${BASE_BRANCH} — nothing for the verifier to review (it reviews \`*.md\` diffs only). This is an \`impl/sec-*\` back-edge branch, whose fix was already reviewed once: the SECURITY-phase finding it closes. Human review (\`.claude/rules/review-gate.md\` step 5) is still required before merge — this comment only satisfies the mechanical CI attestation, it does not assert the code/test/proof diff was reviewed."
       } > "$NOTE"
       gh pr comment "$PR" --body-file "$NOTE"
-      echo "Posted a not-applicable attestation to PR #$PR (branch matches impl/sec-*|patch/*, no markdown changed)."
+      echo "Posted a not-applicable attestation to PR #$PR (impl/sec-* branch, no markdown changed)."
       BRANCH="$(gh pr view "$PR" --json headRefName --jq .headRefName)"
       RUN_ID="$(gh run list --workflow Verifier --branch "$BRANCH" --limit 1 --json databaseId --jq '.[0].databaseId' 2>/dev/null || true)"
       if [[ -n "$RUN_ID" ]]; then
