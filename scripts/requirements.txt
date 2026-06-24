@@ -1,7 +1,0 @@
-# Python dependencies for SpecFlow template tooling.
-# These power the doc renderer and dashboard generator.
-# Independent of your project's tech stack.
-markdown>=3.6
-jinja2>=3.1
-anthropic>=0.40
-pytest>=8.0

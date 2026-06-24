@@ -34,11 +34,11 @@ while IFS= read -r dfy; do
   fi
 done < <(find verification -name '*.dfy' -type f)
 
-# 3. The demo test file carries # Covers: annotations.
-if grep -q '# Covers: REQ-' tests/demo_greeting/test_greeting.py; then
-  pass "demo tests carry # Covers: annotations"
+# 3. The demo test file carries // Covers: annotations.
+if grep -q '// Covers: REQ-' tests/DemoGreeting.Tests/GreetingTests.cs; then
+  pass "demo tests carry // Covers: annotations"
 else
-  fail "tests/demo_greeting/test_greeting.py has no # Covers: REQ-NNN annotations"
+  fail "tests/DemoGreeting.Tests/GreetingTests.cs has no // Covers: REQ-NNN annotations"
 fi
 
 # 4. The ANALYZE linkage check must name plans it skips (no silent skip).

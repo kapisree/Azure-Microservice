@@ -73,12 +73,12 @@ else
   fail "verifier.yml does not trigger on opened/synchronize — non-draft PRs are never verified"
 fi
 
-# 7. Tooling dependencies used by the gates must be declared.
-for dep in pytest anthropic; do
-  if grep -qi "^${dep}" scripts/requirements.txt; then
-    pass "scripts/requirements.txt declares ${dep}"
+# 7. The .NET tooling projects used by the gates must exist.
+for proj in src/Tools/RenderDashboard/RenderDashboard.csproj src/Tools/RenderDoc/RenderDoc.csproj; do
+  if [[ -f "$proj" ]]; then
+    pass "$proj exists"
   else
-    fail "scripts/requirements.txt missing '${dep}' — quality gates fail on a clean checkout"
+    fail "$proj missing — quality gates fail on a clean checkout"
   fi
 done
 

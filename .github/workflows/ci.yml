@@ -8,17 +8,14 @@ on:
 
 jobs:
   quality-gates:
-    name: Quality gates (pytest + Dafny + governance)
+    name: Quality gates (dotnet + Dafny + governance)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-dotnet@v4
         with:
-          python-version: "3.12"
-
-      - name: Install Python dependencies
-        run: pip install -r scripts/requirements.txt
+          dotnet-version: "8.0.x"
 
       - name: Install Dafny (release zip bundles the Z3 solver)
         run: |
