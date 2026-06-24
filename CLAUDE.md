@@ -64,16 +64,16 @@ Out-of-cycle: `/retrospective` runs on `phase/retro-YYYY-MM-DD` (Article `art-re
 - SPECIFY: `docs/specs/2026-05-28-demo-greeting-design.md`
 - ARCHITECTURE: `docs/adr/001-greeting-invariant.md`, `docs/architecture/2026-05-28-demo-greeting-overview.md`, `docs/architecture/2026-05-28-demo-greeting-threat-model.md`
 - PLAN/TASKS: `docs/plans/2026-05-28-demo-greeting-plan.md`
-- IMPLEMENT: `src/demo_greeting/`, `tests/demo_greeting/`, `verification/demo_greeting/`
+- IMPLEMENT: `src/DemoGreeting/`, `tests/DemoGreeting.Tests/`, `verification/demo_greeting/`
 - Fresh-eyes review: `docs/reviews/2026-05-28-v3.1-demo-review.md`
 - SECURITY: `docs/security/0.0.1-demo-{review,disposition}.md`
 - RELEASE: `docs/releases/0.0.1-demo-{notes,migration,known-limitations}.md`, tag `v0.0.1-demo`
 
 ## Common Commands
 
-- Run everything CI runs (pytest + Dafny + governance tests + per-stack hook): `bash scripts/run-quality-gates.sh`
-- Run Python tests only: `python -m pytest tests/ -q`
-- Run a single test: `python -m pytest tests/demo_greeting/test_greeting.py::test_greet_world -v`
+- Run everything CI runs (dotnet build/test + Dafny + governance tests + per-stack hook): `bash scripts/run-quality-gates.sh`
+- Run all .NET tests only: `dotnet test`
+- Run a single test: `dotnet test --filter FullyQualifiedName~DemoGreeting.Tests.GreetingTests.GreetWorld`
 - Run one governance test directly: `bash tests/governance/test_onboarding_surface.sh`
 - Verify all Dafny proofs: `dafny verify $(find verification -name '*.dfy')`
 - Verify a single proof: `dafny verify verification/demo_greeting/greeting.dfy`
@@ -82,7 +82,6 @@ Out-of-cycle: `/retrospective` runs on `phase/retro-YYYY-MM-DD` (Article `art-re
 - Run the verifier against a PR — **outside** any Claude Code session, a session can't spawn another: `bash scripts/run-verifier.sh <PR-number>` (add `--persona` for persona mode)
 - Render the pipeline dashboard / a single doc: `bash scripts/render-dashboard.sh`, `bash scripts/render-doc.sh <file>`
 - Initialize a downstream product from this template (writes `.stack`, creates pipeline dirs): `bash scripts/init-project.sh`
-- Install template tooling deps: `pip install -r scripts/requirements.txt`
 
 Dafny is a hard dependency, not optional, as long as any `.dfy` file exists under `verification/` — `run-quality-gates.sh` fails the gate (not skips) if `.dfy` files are present but the `dafny` binary is missing. The shipped demo (`verification/demo_greeting/`) means this repo currently requires Dafny installed.
 
@@ -90,10 +89,10 @@ Dafny is a hard dependency, not optional, as long as any `.dfy` file exists unde
 
 - **Traceability chain**: `REQ-NNN` (spec) → `ADR-NNN` (architecture) → task (plan) → `src/` implementation + `tests/` + `verification/*.dfy` proof + `src/contracts/` runtime contract (for `[verifiable]`, deferred to v3.2) or just a test (for `[verifiable-model]`). `scripts/check-traceability.sh` enforces ID uniqueness and proof↔spec linkage mechanically; `scripts/analyze-adr-plan-linkage.sh` enforces the ADR→plan link; the verifier skill enforces everything else by review.
 - **Verification is three-layered, never one proof = done**: a Dafny proof only establishes that a *contract model* is total/sound for all inputs (`verification/`), not that the production code is correct. A runtime contract (`src/contracts/`, full `[verifiable]` tag only) enforces that proven contract at the code boundary. Tests (`tests/`) verify the actual implementation for concrete cases. See `verification/README.md` and `src/contracts/README.md` for the extraction convention (`Proves:` / `Extracted from:` headers, checked by CI).
-- **`scripts/run-quality-gates.sh` is the single source of truth for "green"** — it runs pytest, then Dafny, then every `tests/governance/test_*.sh`, then an optional generated per-stack hook (`scripts/quality-gates-<stack>.sh`, written by `init-project.sh` based on `.stack`). `.github/workflows/ci.yml` invokes this exact script; there is no separate CI-only check, so a local green run means CI will also be green.
+- **`scripts/run-quality-gates.sh` is the single source of truth for "green"** — it runs pytest (if any `test_*.py` remain), then Dafny, then every `tests/governance/test_*.sh`, then an optional generated per-stack hook (`scripts/quality-gates-<stack>.sh`, written by `init-project.sh` based on `.stack`). `.github/workflows/ci.yml` invokes this exact script; there is no separate CI-only check, so a local green run means CI will also be green.
 - **Governance tests are tests about the factory's own process compliance**, not the product — e.g. `test_onboarding_surface.sh` fails if README/`init-project.sh` drift from the current pipeline version, `test_constitution_articles.sh` fails if `constitution.md` doesn't have exactly 12 articles with unique `art-*` slugs. They run inside the same quality-gate pass as unit tests, so process drift breaks CI the same way a broken test would.
 - **The verifier runs outside Claude Code on purpose**: `.claude/skills/verifier` is invoked via `claude -p` from `scripts/run-verifier.sh` in a plain terminal, because a running Claude Code session cannot spawn another one. It posts findings as PR comments, satisfying `.github/workflows/verifier.yml`'s "Verifier findings posted" check — that check only confirms a findings comment exists, it does not parse or enforce the verdict (REQUEST_CHANGES vs APPROVE); enforcing the verdict is the human reviewer's job.
-- **This repo is itself the template, now initialized for the Claims Status API product**: `.stack` records stack `other` (.NET/C#); everything under `src/`, `tests/`, `verification/` outside `demo_greeting/` remains a placeholder (`.keep`) until IMPLEMENT lands the scaffold. The demo greeting pipeline is the only fully-realized example of the 10-phase flow — read it before building a new spec rather than starting from a blank page.
+- **This repo is itself the template, now initialized for the Claims Status API product**: `.stack` records stack `other` (.NET/C#); everything under `src/`, `tests/`, `verification/` outside `DemoGreeting`/`demo_greeting` remains a placeholder (`.keep`) until IMPLEMENT lands the scaffold. The demo greeting pipeline is the only fully-realized example of the 10-phase flow — read it before building a new spec rather than starting from a blank page.
 
 ## Critical Never-Do
 

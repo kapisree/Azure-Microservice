@@ -30,7 +30,7 @@ Out-of-cycle: phase/retro-YYYY-MM-DD (retrospectives),
 
 Each phase uses specific tools (see `CLAUDE.md` for the exact commands) and merges via PR with:
 
-- **Mechanical gates in CI** — `scripts/run-quality-gates.sh` (pytest + Dafny + governance tests) runs on every PR, plus Dafny verification and contract-alignment checks on `impl/*` and `phase/validate` branches.
+- **Mechanical gates in CI** — `scripts/run-quality-gates.sh` (dotnet build/test + Dafny + governance tests) runs on every PR, plus Dafny verification and contract-alignment checks on `impl/*` and `phase/validate` branches.
 - **Verifier review, run locally on your Claude subscription** — from a terminal *outside* any Claude Code session, run `scripts/run-verifier.sh <PR-number>`. It reviews the changed documents via `claude -p`, posts findings to the PR, and satisfies CI's "Verifier findings posted" attestation check. Add `--persona` for persona-based review. No API key is needed anywhere.
 - **Human approval** — a reviewer enforces the verifier's verdict and merges.
 
@@ -51,7 +51,7 @@ Each phase uses specific tools (see `CLAUDE.md` for the exact commands) and merg
 | Script | Purpose |
 |--------|---------|
 | `scripts/init-project.sh` | One-time project setup (dirs, `.stack`, per-stack hook) |
-| `scripts/run-quality-gates.sh` | VALIDATE gate: pytest + Dafny + governance tests + stack hook |
+| `scripts/run-quality-gates.sh` | VALIDATE gate: dotnet build/test + Dafny + governance tests + stack hook |
 | `scripts/run-verifier.sh` | Verifier review via `claude -p` (run outside a Claude session) |
 | `scripts/analyze-adr-plan-linkage.sh` | ANALYZE gate: ADR → plan traceability check |
 | `scripts/configure-repo.sh` | GitHub branch protection setup |
@@ -74,7 +74,7 @@ cat verification/README.md
 ## Requirements
 
 - Git, GitHub CLI (`gh`)
-- Python 3.12+ (template tooling — independent of your product stack); `pip install -r scripts/requirements.txt`
+- .NET 8 SDK (template tooling — independent of your product stack)
 - Claude Code with a subscription (the verifier runs on it — no API key needed)
   - [SpecKit](https://github.com/github/spec-kit) and [Superpowers](https://github.com/obra/superpowers) installed as Claude Code plugins
 - Dafny — required while any `.dfy` files exist in `verification/` (the shipped demo includes proofs; install Dafny or remove the demo)

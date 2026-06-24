@@ -8,6 +8,8 @@ FILE="${1:-}"
 mkdir -p docs/dashboard
 LOG=docs/dashboard/.render-log
 echo "[$(date -u +%FT%TZ)] render-doc start: $FILE" >> "$LOG"
-(python3 -m scripts.render_doc --source "$FILE" >> "$LOG" 2>&1 \
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+(cd "$ROOT_DIR" && dotnet run --project src/Tools/RenderDoc --configuration Release -- --source "$FILE" >> "$LOG" 2>&1 \
    || echo "[render-doc] failed (non-blocking): $FILE" >> "$LOG") &
 disown || true

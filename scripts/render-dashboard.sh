@@ -7,6 +7,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$ROOT_DIR"
-python3 -m scripts.render_dashboard "$@"
+dotnet run --project src/Tools/RenderDashboard --configuration Release -- "$@"
 
 echo "[dashboard] Open docs/dashboard/index.html in a browser to view."
