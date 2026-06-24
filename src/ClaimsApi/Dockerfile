@@ -1,9 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY ClaimsApi.sln .
 COPY src/ClaimsApi/ClaimsApi.csproj src/ClaimsApi/
-COPY tests/ClaimsApi.Tests/ClaimsApi.Tests.csproj tests/ClaimsApi.Tests/
-RUN dotnet restore ClaimsApi.sln
+RUN dotnet restore src/ClaimsApi/ClaimsApi.csproj
 COPY src/ClaimsApi/ src/ClaimsApi/
 RUN dotnet publish src/ClaimsApi/ClaimsApi.csproj -c Release -o /app
 
